@@ -4,213 +4,230 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>赞助 PaperKito · Sponsor PaperKito</title>
-<meta name="description" content="如果我的某个项目帮到了你，可以请我喝杯咖啡。支持爱发电、支付宝、微信。">
+<meta name="description" content="如果我的某个项目帮到了你，可以请我喝杯咖啡。支持爱发电、支付宝、微信赞赏。">
 <style>
+  /* Firefly 的配色手法：全部颜色由单一 hue 在 oklch 空间推导，整体天然和谐。
+     这里沿用该手法，色相换成 Arietta 品牌规范的紫（292）。 */
   :root {
-    --bg: #FBFAFE;
-    --surface: #FFFFFF;
-    --text: #1A1729;
-    --muted: #6E6A85;
-    --line: #E8E5F2;
-    --accent: #5F52D6;
-    --accent-hover: #523FB8;
-    --tint: #F3F1FC;
+    --hue: 292;
+
+    --page-bg:      oklch(0.976 0.007 var(--hue));
+    --card-bg:      oklch(1 0 0);
+    --text:         oklch(0.30 0.024 var(--hue));
+    --muted:        oklch(0.55 0.018 var(--hue));
+    --faint:        oklch(0.66 0.014 var(--hue));
+    --border:       oklch(0.30 0.02 var(--hue) / 0.09);
+    --border-soft:  oklch(0.30 0.02 var(--hue) / 0.06);
+    --primary:      oklch(0.58 0.17 var(--hue));
+    --primary-soft: oklch(0.955 0.035 var(--hue));
+    --primary-text: oklch(0.47 0.16 var(--hue));
+    --shadow: 0 2px 8px oklch(0.30 0.02 var(--hue) / .06),
+              0 12px 28px -12px oklch(0.30 0.02 var(--hue) / .16);
+    --shadow-sm: 0 1px 3px oklch(0.30 0.02 var(--hue) / .10);
+
+    --radius-large: 1rem;
+    --radius-xl: .75rem;
+    --radius-lg: .5rem;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #12111A;
-      --surface: #1B1926;
-      --text: #EDEAF6;
-      --muted: #9C97B4;
-      --line: #2C2938;
-      --accent: #7F77DD;
-      --accent-hover: #8F88E6;
-      --tint: #221F31;
+      --page-bg:      oklch(0.19 0.012 var(--hue));
+      --card-bg:      oklch(0.235 0.014 var(--hue));
+      --text:         oklch(0.94 0.012 var(--hue));
+      --muted:        oklch(0.72 0.016 var(--hue));
+      --faint:        oklch(0.58 0.014 var(--hue));
+      --border:       oklch(0.94 0.012 var(--hue) / 0.10);
+      --border-soft:  oklch(0.94 0.012 var(--hue) / 0.07);
+      --primary:      oklch(0.76 0.12 var(--hue));
+      --primary-soft: oklch(0.30 0.065 var(--hue));
+      --primary-text: oklch(0.85 0.095 var(--hue));
+      --shadow: 0 2px 8px oklch(0 0 0 / .28),
+                0 12px 28px -12px oklch(0 0 0 / .5);
+      --shadow-sm: 0 1px 3px oklch(0 0 0 / .35);
     }
   }
+
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
-    padding: 72px 24px 80px;
-    background: var(--bg);
+    padding: 54px 18px 62px;
+    background: var(--page-bg);
     color: var(--text);
     font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: 15px;
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 600px; margin: 0 auto; }
+  .page { max-width: 460px; margin: 0 auto; }
 
-  .mark { width: 44px; height: 44px; display: block; margin-bottom: 26px; }
-  .mark path { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; }
-
-  h1 {
-    font-size: 31px;
-    font-weight: 600;
-    letter-spacing: -0.015em;
-    line-height: 1.25;
-    margin: 0 0 10px;
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow);
+    padding: 28px 24px;
+    margin-bottom: 16px;
   }
-  .sub { color: var(--muted); font-size: 15px; margin: 0 0 40px; }
 
-  .region {
-    display: flex;
+  /* ---------- 个人信息 ---------- */
+  .profile { text-align: center; padding: 32px 24px 26px; }
+  .avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 15px;
+    box-shadow: 0 0 0 3px var(--card-bg), 0 0 0 4px var(--border), 0 6px 18px -8px oklch(0.30 0.02 var(--hue) / .4);
+  }
+  .name {
+    font-size: 21px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+  .handle {
+    display: inline-flex;
     align-items: center;
-    gap: 14px;
+    gap: 5px;
     font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    margin: 0 0 16px;
-  }
-  .region::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--line);
-  }
-
-  .btn {
-    display: block;
-    background: var(--accent);
-    color: #fff;
+    color: var(--muted);
     text-decoration: none;
-    text-align: center;
-    padding: 17px 20px;
-    border-radius: 13px;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    transition: background .16s ease, transform .16s ease;
+    transition: color .15s ease;
   }
-  .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
-  .btn small {
-    display: block;
-    margin-top: 3px;
-    font-size: 12.5px;
-    font-weight: 400;
-    opacity: .82;
-    letter-spacing: 0;
+  .handle:hover { color: var(--primary); }
+  .handle svg { width: 13px; height: 13px; opacity: .7; }
+  .lede {
+    margin: 15px auto 0;
+    max-width: 320px;
+    font-size: 14.5px;
+    color: var(--muted);
   }
 
-  .divider {
+  /* ---------- 支付方式 ---------- */
+  .head {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin: 30px 0 26px;
-    color: var(--muted);
-    font-size: 12.5px;
+    gap: 9px;
+    margin-bottom: 16px;
   }
-  .divider::before, .divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--line);
+  .pill {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    color: var(--primary-text);
+    background: var(--primary-soft);
+    border-radius: 9999px;
+    padding: 3px 10px;
   }
+  .head .note { font-size: 12px; color: var(--faint); }
 
-  .label {
-    font-size: 12px;
-    letter-spacing: 0.09em;
-    color: var(--muted);
-    margin: 0 0 12px;
-  }
-
-  .qrs { display: flex; gap: 18px; }
-  .qr {
-    flex: 1 1 0;
-    min-width: 0;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 15px;
-    text-align: center;
-  }
-  .qr .slot {
-    background: #FFFFFF;
-    border-radius: 11px;
-    aspect-ratio: 1;
+  .afdian {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    gap: 7px;
+    background: var(--primary-soft);
+    color: var(--primary-text);
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 600;
+    padding: 13px 18px;
+    border-radius: 9999px;
+    margin-bottom: 16px;
+    transition: filter .15s ease, transform .15s ease;
   }
-  .qr img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .qr .slot .missing { color: #8A8A96; font-size: 12px; }
-  .qr .cap { margin-top: 13px; font-size: 14px; font-weight: 600; }
-  .qr .cap span {
-    display: block;
-    font-size: 11.5px;
-    font-weight: 400;
-    color: var(--muted);
-    letter-spacing: 0.02em;
+  .afdian:hover { filter: brightness(.97); transform: translateY(-1px); }
+  .afdian small { font-size: 12px; font-weight: 400; opacity: .72; }
+  .afdian svg { width: 14px; height: 14px; opacity: .8; }
+
+  .qrs { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  .qr {
+    background: var(--page-bg);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    padding: 11px;
+    text-align: center;
   }
+  .qr .box {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 7px;
+    box-shadow: var(--shadow-sm);
+  }
+  .qr img { width: 100%; display: block; border-radius: 4px; }
+  .qr .cap { margin-top: 9px; font-size: 12.5px; font-weight: 600; }
+  .qr .sub { font-size: 11px; color: var(--faint); }
 
   .terms {
-    margin: 32px 0 0;
-    padding: 0;
-    color: var(--muted);
-    font-size: 13px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--faint);
+    line-height: 1.75;
+    margin: 0;
   }
 
-  footer {
-    margin-top: 40px;
-    padding-top: 22px;
-    border-top: 1px solid var(--line);
-    color: var(--muted);
-    font-size: 12.5px;
+  @media (max-width: 420px) {
+    body { padding: 34px 14px 46px; }
+    .card { padding: 24px 18px; }
+    .profile { padding: 28px 18px 22px; }
+    .qrs { grid-template-columns: 1fr; }
   }
-  footer a { color: var(--accent); text-decoration: none; }
-  footer a:hover { text-decoration: underline; }
-
-  @media (max-width: 480px) {
-    body { padding: 48px 18px 60px; }
-    h1 { font-size: 26px; }
-    .qrs { flex-direction: column; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<main>
+<div class="page">
 
-  <svg class="mark" viewBox="0 0 44 44" aria-hidden="true">
-    <path d="M6 31 C 14 9, 30 9, 38 27" />
-    <path d="M11 34 C 17 18, 27 18, 33 31" opacity=".38" />
-  </svg>
+  <section class="card profile">
+    <img class="avatar"
+         src="https://avatars.githubusercontent.com/PaperKito?size=200"
+         alt="PaperKito"
+         onerror="this.style.visibility='hidden'">
+    <h1 class="name">PaperKito</h1>
+    <a class="handle" href="https://github.com/PaperKito">
+      <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.07-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.15 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+      </svg>
+      github.com/PaperKito
+    </a>
+    <p class="lede">如果我的某个项目帮到了你，可以请我喝杯咖啡。</p>
+  </section>
 
-  <h1>赞助 PaperKito</h1>
-  <p class="sub">如果我的某个项目帮到了你，可以请我喝杯咖啡。</p>
-
-  <div class="region">中国</div>
-
-  <a class="btn" href="https://afdian.com/a/PaperKito">
-    前往爱发电
-    <small>支付宝 / 微信，可包月或自选金额</small>
-  </a>
-
-  <div class="divider">或</div>
-
-  <p class="label">扫码赞助</p>
-  <div class="qrs">
-    <div class="qr">
-      <div class="slot">
-        <img src="alipay.png" alt="支付宝收款码" onerror="this.style.display='none';this.parentNode.innerHTML='<span class=&quot;missing&quot;>alipay.png 未放置</span>';">
-      </div>
-      <div class="cap">支付宝<span>ALIPAY</span></div>
+  <section class="card">
+    <div class="head">
+      <span class="pill">中国</span>
+      <span class="note">支付宝 / 微信</span>
     </div>
-    <div class="qr">
-      <div class="slot">
-        <img src="wechat.png" alt="微信赞赏码" onerror="this.style.display='none';this.parentNode.innerHTML='<span class=&quot;missing&quot;>wechat.png 未放置</span>';">
+
+    <a class="afdian" href="https://afdian.com/a/PaperKito">
+      爱发电
+      <small>包月订阅 · 自选金额</small>
+      <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M6 3.5L10.5 8L6 12.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+
+    <div class="qrs">
+      <div class="qr">
+        <div class="box"><img src="alipay.png" alt="支付宝收款码"></div>
+        <div class="cap">支付宝</div>
+        <div class="sub">扫码付款</div>
       </div>
-      <div class="cap">微信赞赏<span>WECHAT</span></div>
+      <div class="qr">
+        <div class="box"><img src="wechat.png" alt="微信赞赏码"></div>
+        <div class="cap">微信赞赏</div>
+        <div class="sub">扫码赞赏</div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <p class="terms">赞助完全自愿，不解锁任何功能，也不带来优先支持或内测版本。</p>
+  <p class="terms">
+    赞助完全自愿，不解锁任何功能，也不带来优先支持或内测版本。<br>
+    该页面为个人主页，与任何具体项目无关。
+  </p>
 
-  <footer>
-    <a href="https://github.com/PaperKito">github.com/PaperKito</a>
-  </footer>
-
-</main>
+</div>
 </body>
 </html>

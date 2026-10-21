@@ -1,0 +1,293 @@
+---
+import { Icon } from "astro-icon/components";
+import DropdownItem from "@/components/common/DropdownItem.astro";
+import FloatingButton from "@/components/common/FloatingButton.astro";
+import DisplaySettingsIntegrated from "@/components/controls/DisplaySettingsIntegrated.svelte";
+import MusicPlayer from "@/components/features/MusicPlayer.astro";
+import { backgroundWallpaper, musicPlayerConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+
+/**
+ * SiteDock - 右下角悬浮控制坞
+ * 顶部导航栏移除后，站点级控制入口统一收拢到这里：
+ * - 导航菜单（移动抽屉，全端可用）
+ * - 主题色 / 显示设置（DisplaySettingsIntegrated 面板）
+ * - 亮色 / 暗色 / 跟随系统
+ * - 背景视频播放开关（配置开启时）
+ */
+
+// 亮暗模式初始值（SSR 阶段只渲染静态结构，实际选中态由客户端脚本同步）
+const showBgPlayerToggle =
+	backgroundWallpaper.playerEnable && backgroundWallpaper.mode !== "none";
+
+// 音乐入口：侧栏收纳后改到悬浮坞（showInDock 优先，兼容旧开关）
+const showDockMusic =
+	musicPlayerConfig.showInDock ??
+	(musicPlayerConfig.showInNavbar || musicPlayerConfig.showInSidebar !== false);
+---
+
+<div class="site-dock">
+    <!-- 导航菜单：打开全屏抽屉 NavMenuPanel -->
+    <FloatingButton
+        id="nav-menu-switch"
+        icon="material-symbols:menu-rounded"
+        ariaLabel="导航菜单"
+        title="导航菜单"
+    />
+
+    <!-- 音乐播放器：从侧栏收纳到这里，点击按钮弹出播放面板 -->
+    {showDockMusic && (
+        <div class="dock-item">
+            <FloatingButton
+                id="music-player-switch"
+                icon="material-symbols:music-note-rounded"
+                ariaLabel={i18n(I18nKey.music)}
+                title={i18n(I18nKey.music)}
+            />
+            <div
+                id="music-nav-panel"
+                class="float-panel float-panel-closed absolute transition-all right-0 w-80 p-2"
+                data-floating-panel
+                data-floating-panel-trigger="music-player-switch"
+                inert
+                aria-hidden="true"
+            >
+                <MusicPlayer id="music-dock-player" />
+            </div>
+        </div>
+    )}
+
+    <!-- 主题色 / 显示设置：调色盘按钮 + 弹出面板 -->
+    <div class="dock-item">
+        <FloatingButton
+            id="display-settings-switch"
+            icon="material-symbols:palette-outline"
+            ariaLabel="主题与显示设置"
+            title="主题与显示设置"
+        />
+        <DisplaySettingsIntegrated client:load></DisplaySettingsIntegrated>
+    </div>
+
+    <!-- 亮暗模式：太阳/月亮图标随模式切换，弹出亮/暗/系统三选项 -->
+    <div class="dock-item">
+        <FloatingButton
+            id="scheme-switch"
+            icon="material-symbols:wb-sunny-outline-rounded"
+            toggleIcon="material-symbols:dark-mode-outline-rounded"
+            ariaLabel={i18n(I18nKey.lightMode)}
+            title={i18n(I18nKey.lightMode)}
+        />
+        <div
+            id="theme-mode-panel"
+            class="float-panel float-panel-closed absolute transition-all right-0 p-2 w-40"
+            role="menu"
+            aria-labelledby="scheme-switch"
+            data-floating-panel
+            data-floating-panel-trigger="scheme-switch"
+            inert
+            aria-hidden="true"
+        >
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={false}
+            >
+                <span class="scheme-option-inner" data-scheme-option="light">
+                    <Icon name="material-symbols:wb-sunny-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.lightMode)}
+                </span>
+            </DropdownItem>
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={false}
+            >
+                <span class="scheme-option-inner" data-scheme-option="dark">
+                    <Icon name="material-symbols:dark-mode-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.darkMode)}
+                </span>
+            </DropdownItem>
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={true}
+            >
+                <span class="scheme-option-inner" data-scheme-option="system">
+                    <Icon name="material-symbols:brightness-auto-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.systemMode)}
+                </span>
+            </DropdownItem>
+        </div>
+    </div>
+
+    <!-- 背景视频播放开关（配置开启时显示，移动端隐藏） -->
+    {showBgPlayerToggle && (
+        <FloatingButton
+            id="bg-player-toggle"
+            icon="material-symbols:play-arrow-rounded"
+            toggleIcon="material-symbols:pause-rounded"
+            ariaLabel="背景视频播放"
+            title="背景视频播放"
+            class="hidden md:flex"
+        />
+    )}
+</div>
+
+<script>
+import { DARK_MODE, LIGHT_MODE, SYSTEM_MODE } from "@/constants/constants";
+import type { LIGHT_DARK_MODE } from "@/types/config";
+import {
+	applyThemeToDocument,
+	getStoredTheme,
+	setTheme,
+} from "@/utils/setting-utils";
+
+/** 切换浮动面板的开合（class 变化由 floating-panel-utils 同步 inert / aria） */
+function toggleFloatingPanel(id: string): void {
+	document.getElementById(id)?.classList.toggle("float-panel-closed");
+}
+
+/** 当前显示的实际主题（system 模式下取系统主题） */
+function getDisplayedTheme(): LIGHT_DARK_MODE {
+	const mode = getStoredTheme();
+	if (mode === SYSTEM_MODE) {
+		return window.matchMedia("(prefers-color-scheme: dark)").matches
+			? DARK_MODE
+			: LIGHT_MODE;
+	}
+	return mode;
+}
+
+/** 同步亮暗按钮图标（.toggled → 月亮）与三选项的选中态 */
+function syncSchemeUI(): void {
+	const displayed = getDisplayedTheme();
+	document
+		.getElementById("scheme-switch")
+		?.classList.toggle("toggled", displayed === DARK_MODE);
+
+	const currentMode = getStoredTheme();
+	document.querySelectorAll("[data-scheme-option]").forEach((el) => {
+		const isActive = el.getAttribute("data-scheme-option") === currentMode;
+		el.closest(".scheme-option")?.classList.toggle(
+			"current-theme-btn",
+			isActive,
+		);
+	});
+}
+
+function switchScheme(mode: LIGHT_DARK_MODE): void {
+	setTheme(mode);
+	syncSchemeUI();
+}
+
+function initSiteDock(): void {
+	// 导航抽屉开关
+	document
+		.getElementById("nav-menu-switch")
+		?.addEventListener("click", () =>
+			toggleFloatingPanel("nav-menu-panel"),
+		);
+
+	// 音乐播放面板开关
+	document
+		.getElementById("music-player-switch")
+		?.addEventListener("click", () => toggleFloatingPanel("music-nav-panel"));
+
+	// 显示设置（主题色等）面板开关
+	document
+		.getElementById("display-settings-switch")
+		?.addEventListener("click", () => toggleFloatingPanel("display-setting"));
+
+	// 亮暗模式面板开关
+	document.getElementById("scheme-switch")?.addEventListener("click", () => {
+		syncSchemeUI();
+		toggleFloatingPanel("theme-mode-panel");
+	});
+
+	// 亮暗三选项
+	document.querySelectorAll("[data-scheme-option]").forEach((el) => {
+		el.addEventListener("click", () => {
+			const mode = el.getAttribute("data-scheme-option") as LIGHT_DARK_MODE;
+			switchScheme(mode);
+			toggleFloatingPanel("theme-mode-panel");
+		});
+	});
+
+	// 初始同步 + 系统主题变化时同步
+	syncSchemeUI();
+	window
+		.matchMedia("(prefers-color-scheme: dark)")
+		.addEventListener("change", () => {
+			if (getStoredTheme() === SYSTEM_MODE) {
+				applyThemeToDocument(SYSTEM_MODE);
+				syncSchemeUI();
+			}
+		});
+
+	// 背景视频播放开关：与 BackgroundPlayer 通过自定义事件联动
+	const bgPlayerBtn = document.getElementById("bg-player-toggle");
+	if (bgPlayerBtn) {
+		bgPlayerBtn.addEventListener("click", () => {
+			window.dispatchEvent(new CustomEvent("bg-player-toggle"));
+		});
+		const syncBgPlayerIcon = (playing: boolean) => {
+			bgPlayerBtn.classList.toggle("toggled", playing);
+		};
+		window.addEventListener("bg-player-state-change", function (e) {
+			const ce = e as CustomEvent;
+			syncBgPlayerIcon(!!(ce.detail && ce.detail.playing));
+		});
+		// 壁纸模式切换时，none 模式隐藏播放按钮
+		window.addEventListener("wallpaperModeChange", function (e) {
+			const ce = e as CustomEvent;
+			const mode = ce.detail && ce.detail.mode;
+			bgPlayerBtn.style.display = mode === "none" ? "none" : "";
+		});
+		// 初始状态（含 Swup 切页后同步）
+		const syncBgPlayerState = () => {
+			syncBgPlayerIcon(
+				document.documentElement.hasAttribute("data-bg-video-playing"),
+			);
+		};
+		syncBgPlayerState();
+		document.addEventListener("swup:contentReplaced", syncBgPlayerState);
+		document.addEventListener("astro:page-load", syncBgPlayerState);
+	}
+}
+
+initSiteDock();
+</script>
+
+<style>
+/* 悬浮坞：纵向排列在右下角，跟随 floating-controls-container 定位 */
+.site-dock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+/* 容器默认不响应点击，各按钮恢复点击（浮层面板经继承同样可交互） */
+.site-dock > * {
+    pointer-events: auto;
+}
+
+/* 坞内弹出面板统一锚定到对应按钮上方、右对齐 */
+/* 注意：main.css 的 .float-panel（@layer components）带 top-21，
+   未分层样式优先级高于 @layer，这里显式改锚点；
+   :not(.float-panel-closed) 保证关闭态仍吃 .float-panel-closed 的 pointer-events: none */
+.site-dock :global(.float-panel:not(.float-panel-closed)) {
+    top: auto;
+    right: 0;
+    bottom: 100%;
+    margin-bottom: 0.5rem;
+    z-index: 50;
+}
+
+/* 亮暗选项：让整行可点（DropdownItem 内再包了一层 span） */
+.site-dock :global(.scheme-option) {
+    cursor: pointer;
+}
+</style>

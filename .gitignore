@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.astro/
+
+# generated assets
+public/vndb-covers/
+
+# logs
+*.log
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# other package managers' lockfiles
+package-lock.json
+bun.lockb
+yarn.lock
+
+# ide
+.idea
+*.iml
+.vscode/

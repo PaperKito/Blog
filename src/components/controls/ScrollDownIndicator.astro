@@ -1,0 +1,68 @@
+---
+import { Icon } from "astro-icon/components";
+---
+
+<div
+  id="scroll-down-indicator"
+  class="scroll-down-indicator"
+  onclick="document.getElementById('main-grid')?.scrollIntoView({ behavior: 'smooth' })"
+>
+  <Icon name="material-symbols:keyboard-arrow-down-rounded" class="scroll-down-icon" />
+</div>
+
+<script is:inline>
+  (function () {
+
+    if (window.__scrollDownIndicatorInit) return;
+    window.__scrollDownIndicatorInit = true;
+
+    var TARGET_CLEARANCE = 104;
+
+    function updateVisibility() {
+      var indicator = document.getElementById("scroll-down-indicator");
+      if (!indicator) return;
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      if (scrollTop > 100) {
+        indicator.classList.add("hide");
+      } else {
+        indicator.classList.remove("hide");
+      }
+    }
+
+    function getToolbarOverlap() {
+      var el = document.getElementById("wallpaper-wrapper");
+      var vv = window.visualViewport;
+      if (!el || !vv) return 0;
+      var visibleBottom = vv.offsetTop + vv.height;
+      return Math.max(0, el.getBoundingClientRect().bottom - visibleBottom);
+    }
+
+    function updatePosition() {
+      var indicator = document.getElementById("scroll-down-indicator");
+      if (!indicator) return;
+      if (window.innerWidth > 1023 || !/EdgA\//i.test(navigator.userAgent)) {
+        indicator.style.removeProperty("bottom");
+        return;
+      }
+      var overlap = getToolbarOverlap() || 48;
+      indicator.style.setProperty(
+        "bottom",
+        TARGET_CLEARANCE + overlap + "px",
+        "important",
+      );
+    }
+
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+    window.addEventListener("resize", updatePosition, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updatePosition, { passive: true });
+      window.visualViewport.addEventListener("scroll", updatePosition, { passive: true });
+    }
+
+    var wrapper = document.getElementById("wallpaper-wrapper");
+    if (wrapper) wrapper.addEventListener("transitionend", updatePosition);
+
+    updateVisibility();
+    updatePosition();
+  })();
+</script>

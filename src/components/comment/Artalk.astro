@@ -1,0 +1,49 @@
+---
+import { commentConfig, siteConfig } from "@/config";
+
+interface Props {
+	path: string;
+}
+
+const config = {
+	...commentConfig.artalk,
+	el: "#artalk",
+	site: siteConfig.title,
+	pageKey: Astro.props.path,
+	dark: "html.dark",
+	pageTitle: "",
+	...(commentConfig.artalk?.visitorCount ? { pageview: true } : {}),
+};
+---
+<div class="relative w-full">
+
+    <div id="artalk" style="--at-color-main: var(--primary); --at-color-bg: var(--card-bg); --at-color-border: var(--line-divider);"></div>
+
+    <link rel="stylesheet" href="https://unpkg.com/artalk/dist/Artalk.css"/>
+
+    <script type="module" is:inline define:vars={{config}}>
+        import Artalk from 'https://unpkg.com/artalk/dist/Artalk.mjs';
+        const requestedPath = new URLSearchParams(window.location.search).get("path");
+        const effectiveConfig = requestedPath
+            ? { ...config, pageKey: requestedPath }
+            : config;
+
+        const artalk = Artalk.init(effectiveConfig);
+
+        function updateTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            artalk.setDarkMode(isDark);
+        }
+
+        updateTheme();
+
+        const observer = new MutationObserver((_mutations) => {
+            updateTheme();
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    </script>
+</div>

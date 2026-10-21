@@ -1,0 +1,49 @@
+<script lang="ts">
+import Iconify, { addCollection } from "@iconify/svelte/offline";
+
+import iconsData from "@/constants/icons-data.json";
+
+let collectionsAdded = false;
+if (!collectionsAdded) {
+	for (const [, data] of Object.entries(iconsData)) {
+		addCollection(data as Parameters<typeof addCollection>[0]);
+	}
+	collectionsAdded = true;
+}
+
+interface Props {
+	icon: string;
+	class?: string;
+	style?: string;
+}
+
+let { icon, class: className = "", style = "" }: Props = $props();
+
+const iconExists = $derived(() => {
+	const [prefix, name] = icon.split(":");
+	if (!prefix || !name) return false;
+	const collection = (iconsData as Record<string, unknown>)[prefix] as
+		| { icons?: Record<string, unknown> }
+		| undefined;
+	return collection?.icons?.[name] !== undefined;
+});
+</script>
+
+{#if iconExists()}
+	<Iconify
+		{icon}
+		class="inline-icon inline-flex items-center justify-center {className}"
+		style={style}
+	/>
+{:else}
+	<span
+		class="inline-icon inline-flex items-center justify-center {className}"
+		style={style}
+		aria-hidden="true"
+		title="Icon not found: {icon}"
+	>
+		<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+			<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+		</svg>
+	</span>
+{/if}

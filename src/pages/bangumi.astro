@@ -1,0 +1,304 @@
+---
+import { Icon } from "astro-icon/components";
+import BangumiGrid from "@/components/pages/bangumi/BangumiGrid.svelte";
+import { siteConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+import "@/styles/pages/common.css";
+import "@/styles/pages/media-grid.css";
+import type {
+	UserSubjectCollection,
+	UserSubjectCollectionResponse,
+} from "@/types/bangumi";
+import { formatDateI18n } from "@/utils/date-utils";
+import { filterNsfw, isBangumiNsfw } from "@/utils/nsfw-utils";
+
+if (!siteConfig.pages.bangumi) {
+	return Astro.redirect("/404/");
+}
+
+const buildTime = formatDateI18n(new Date());
+
+const bangumiConfig = {
+	username: siteConfig.bangumi?.userId,
+	mode: (siteConfig.bangumi?.mode || "static") as "static" | "dynamic",
+	apiUrl: siteConfig.bangumi?.apiUrl || "https://api.bangumi.one",
+	subjectBaseUrl:
+		siteConfig.bangumi?.subjectBaseUrl || "https://bangumi.one/subject/",
+
+	categories: {
+		book: siteConfig.bangumi?.categories?.book ?? true,
+		anime: siteConfig.bangumi?.categories?.anime ?? true,
+		music: siteConfig.bangumi?.categories?.music ?? true,
+		game: siteConfig.bangumi?.categories?.game ?? true,
+		real: siteConfig.bangumi?.categories?.real ?? false,
+	},
+
+	pagination: {
+		limit: 50,
+		delay: 50,
+		maxTotal: 1000,
+	},
+
+	nsfw: siteConfig.bangumi?.nsfw ?? "off",
+};
+
+const isDynamic = bangumiConfig.mode === "dynamic";
+
+const categoryMap = {
+	book: { id: "book", name: i18n(I18nKey.bangumiCategoryBook), subjectType: 1 },
+	anime: {
+		id: "anime",
+		name: i18n(I18nKey.bangumiCategoryAnime),
+		subjectType: 2,
+	},
+	music: {
+		id: "music",
+		name: i18n(I18nKey.bangumiCategoryMusic),
+		subjectType: 3,
+	},
+	game: { id: "game", name: i18n(I18nKey.bangumiCategoryGame), subjectType: 4 },
+	real: { id: "real", name: i18n(I18nKey.bangumiCategoryReal), subjectType: 6 },
+};
+
+async function fetchBangumiData(username: string, subjectType: number) {
+	const { limit, delay, maxTotal } = bangumiConfig.pagination;
+	let offset = 0;
+	let allData: UserSubjectCollection[] = [];
+	let hasMore = true;
+
+	const isDev = import.meta.env.DEV;
+	const maxPages = isDev ? 1 : 0;
+
+	console.log(
+		`[Bangumi] ${isDev ? "🔧 Dev mode" : "🌐 Prod mode"} - fetching subjectType ${subjectType} data for user ${username}...`,
+	);
+
+	while (hasMore) {
+
+		if (isDev && maxPages > 0 && allData.length >= limit * maxPages) {
+			console.log(`[Bangumi] Dev mode: fetched ${maxPages} page(s), stopping`);
+			break;
+		}
+
+		if (maxTotal > 0 && allData.length >= maxTotal) {
+			console.log(`[Bangumi] Reached max fetch limit ${maxTotal}, stopping`);
+			break;
+		}
+
+		const url = `${bangumiConfig.apiUrl}/v0/users/${username}/collections?subject_type=${subjectType}&limit=${limit}&offset=${offset}`;
+
+		console.log(`[Bangumi] Fetching data: ${url} (fetched: ${allData.length})`);
+
+		const response = await fetch(url, {
+			headers: {
+				"User-Agent": "YuuOuRou Blog",
+				Accept: "application/json",
+			},
+		});
+
+		if (!response.ok) {
+			throw new Error(
+				`[Bangumi] Failed to fetch data (status: ${response.status}): ${url}`,
+			);
+		}
+
+		const data = (await response.json()) as UserSubjectCollectionResponse;
+		const currentBatch = data.data || [];
+
+		if (currentBatch.length > 0) {
+			allData = allData.concat(currentBatch);
+			offset += limit;
+
+			if (currentBatch.length < limit) {
+				hasMore = false;
+			}
+		} else {
+			hasMore = false;
+		}
+
+		if (hasMore) {
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+
+	console.log(`[Bangumi] Fetched ${allData.length} items in total`);
+	return allData;
+}
+
+const bangumiData: Record<string, UserSubjectCollection[]> = {};
+const tabs: Array<{ id: string; name: string; count: number }> = [];
+let fetchFailed = false;
+
+const isUserIdConfigured =
+	bangumiConfig.username &&
+	bangumiConfig.username !== "you-user-id" &&
+	bangumiConfig.username.trim() !== "";
+
+if (!isUserIdConfigured) {
+	console.log("[Bangumi] ⚠️ Bangumi user ID not configured, skipping fetch");
+} else if (!isDynamic) {
+	console.log("[Bangumi] 🌐 Fetching data from API (static mode)");
+}
+
+if (!isDynamic) {
+	for (const [categoryKey, enabled] of Object.entries(
+		bangumiConfig.categories,
+	)) {
+
+		if (!isUserIdConfigured) {
+			break;
+		}
+		if (enabled && categoryMap[categoryKey as keyof typeof categoryMap]) {
+			const categoryInfo = categoryMap[categoryKey as keyof typeof categoryMap];
+			try {
+				const data = await fetchBangumiData(
+
+					bangumiConfig.username!,
+					categoryInfo.subjectType,
+				);
+
+				const filteredData = filterNsfw(
+					data,
+					bangumiConfig.nsfw,
+					isBangumiNsfw,
+				);
+				bangumiData[categoryKey] = filteredData;
+				tabs.push({
+					id: categoryKey,
+					name: categoryInfo.name,
+					count: filteredData.length,
+				});
+			} catch (error) {
+				console.error(
+					`[Bangumi] Failed to fetch ${categoryInfo.name} data:`,
+					error,
+				);
+				fetchFailed = true;
+				break;
+			}
+		}
+	}
+
+	const categoryOrder = siteConfig.bangumi?.categoryOrder || [];
+	if (categoryOrder.length > 0) {
+		tabs.sort((a, b) => {
+			const aIndex = categoryOrder.indexOf(
+				a.id as (typeof categoryOrder)[number],
+			);
+			const bIndex = categoryOrder.indexOf(
+				b.id as (typeof categoryOrder)[number],
+			);
+
+			if (aIndex === -1 && bIndex === -1) return 0;
+			if (aIndex === -1) return 1;
+			if (bIndex === -1) return -1;
+			return aIndex - bIndex;
+		});
+	}
+}
+
+const activeTab = tabs[0]?.id || "anime";
+---
+
+<MainGridLayout title={i18n(I18nKey.bangumi)} description={i18n(I18nKey.bangumiSubtitle)}>
+  <div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-9 py-6 relative w-full">
+
+        <div class="relative w-full mb-8">
+            <div class="mb-6">
+                <div class="page-heading">
+                    <div class="page-icon" aria-hidden="true">
+                        <Icon name="material-symbols:movie" />
+                    </div>
+                    <div>
+                        <h2>{i18n(I18nKey.bangumi)}</h2>
+                        <p>{i18n(I18nKey.bangumiSubtitle)}</p>
+                    </div>
+                    {!isDynamic && (
+                    <p class="page-updated">
+                        <span>{i18n(I18nKey.bangumiLastUpdated)}</span>
+                        <span>{buildTime}</span>
+                    </p>
+                    )}
+                </div>
+            </div>
+
+      {isDynamic ? (
+        /* ==================== Dynamic 模式 ==================== */
+        <>
+          {!isUserIdConfigured ? (
+            <div class="text-center py-16">
+              <div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+                <Icon name="material-symbols:settings" class="text-[2rem] text-(--btn-content)" />
+              </div>
+              <h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+                未配置 Bangumi 用户ID
+              </h2>
+              <p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
+                请在 src/config/siteConfig.ts 中配置你的 Bangumi 用户ID
+              </p>
+            </div>
+          ) : (
+            <BangumiGrid
+              client:load
+              subjectBaseUrl={bangumiConfig.subjectBaseUrl}
+              fetchConfig={{
+                username: bangumiConfig.username!,
+                apiUrl: bangumiConfig.apiUrl,
+                categories: bangumiConfig.categories,
+                categoryOrder: siteConfig.bangumi?.categoryOrder || [],
+                pagination: bangumiConfig.pagination,
+                nsfw: bangumiConfig.nsfw,
+              }}
+            />
+          )}
+        </>
+      ) : (
+        /* ==================== Static 模式 ==================== */
+        <>
+      {fetchFailed ? (
+        <div class="text-center py-16">
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+            <Icon name="material-symbols:error-outline" class="text-[2rem] text-red-500" />
+          </div>
+          <h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+            {i18n(I18nKey.bangumiFetchError)}
+          </h2>
+          <p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
+            {i18n(I18nKey.bangumiFetchErrorDesc)}
+          </p>
+        </div>
+      ) : tabs.length > 0 ? (
+        <>
+          <BangumiGrid client:load tabs={tabs} initialActiveTab={activeTab} bangumiData={bangumiData} subjectBaseUrl={bangumiConfig.subjectBaseUrl} nsfw={bangumiConfig.nsfw} />
+        </>
+      ) : (
+        <div class="text-center py-16">
+          <div class="inline-flex items-center justify-center w-16 h-16 bg-(--btn-regular-bg) rounded-full mb-6 border border-(--line-divider)">
+            <Icon name="material-symbols:settings" class="text-[2rem] text-(--btn-content)" />
+          </div>
+          <h2 class="text-xl font-semibold text-black/80 dark:text-white/80 mb-3">
+            {isUserIdConfigured ? i18n(I18nKey.bangumiEmpty) : "未配置 Bangumi 用户ID"}
+          </h2>
+          <p class="text-black/60 dark:text-white/60 mb-4 max-w-md mx-auto">
+            {isUserIdConfigured ? i18n(I18nKey.bangumiEmptyReason) : "请在 src/config/siteConfig.ts 中配置你的 Bangumi 用户ID"}
+          </p>
+        </div>
+      )}
+        </>
+      )}
+		</div>
+    </div>
+  </div>
+</MainGridLayout>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

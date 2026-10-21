@@ -1,0 +1,151 @@
+---
+
+---
+<script>
+  import { formatCount } from "@/utils/github-card-utils";
+
+  const CACHE_KEY_PREFIX = "github-card:";
+  const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+  interface GithubApiRepo {
+    description: string | null;
+    language: string | null;
+    forks: number;
+    stargazers_count: number;
+    owner?: { avatar_url?: string };
+    license?: { spdx_id?: string } | null;
+  }
+
+  const inflight = new Map<string, Promise<GithubApiRepo | null>>();
+  const done = new Set<string>();
+
+  function cacheKey(repo: string): string {
+    return CACHE_KEY_PREFIX + repo.toLowerCase();
+  }
+
+  function readCache(repo: string): GithubApiRepo | null {
+    try {
+      const raw = localStorage.getItem(cacheKey(repo));
+      if (!raw) return null;
+      const entry = JSON.parse(raw) as {
+        data?: GithubApiRepo;
+        fetchedAt?: number;
+      };
+      const data = entry.data;
+      if (!data || typeof entry.fetchedAt !== "number") return null;
+      if (typeof data.stargazers_count !== "number" || typeof data.forks !== "number")
+        return null;
+      if (Date.now() - entry.fetchedAt >= CACHE_TTL) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCache(repo: string, data: GithubApiRepo): void {
+    try {
+      localStorage.setItem(
+        cacheKey(repo),
+        JSON.stringify({ data, fetchedAt: Date.now() }),
+      );
+    } catch {
+
+    }
+  }
+
+  async function fetchRepo(repo: string): Promise<GithubApiRepo> {
+    const [owner, name] = repo.split("/");
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+    const response = await fetch(url, {
+      referrerPolicy: "no-referrer",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub API returned ${response.status}`);
+    }
+    return (await response.json()) as GithubApiRepo;
+  }
+
+  function applyData(card: Element, data: GithubApiRepo): void {
+    const setText = (selector: string, value: string) => {
+      const el = card.querySelector(selector);
+      if (el) el.textContent = value;
+    };
+
+    setText(".gc-stars", formatCount(data.stargazers_count));
+    setText(".gc-forks", formatCount(data.forks));
+    setText(
+      ".gc-description",
+      data.description?.replace(/:[a-zA-Z0-9_]+:/g, "") || "Description not set",
+    );
+    setText(".gc-language", data.language ?? "Unavailable");
+    setText(".gc-license", data.license?.spdx_id || "no-license");
+
+    const avatar = card.querySelector<HTMLElement>(".gc-avatar");
+    if (avatar && data.owner?.avatar_url) {
+      const avatarUrl = data.owner.avatar_url;
+      avatar.style.backgroundImage = `url("${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}s=32")`;
+      avatar.style.backgroundColor = "transparent";
+    }
+
+    card.classList.remove("fetch-waiting", "fetch-error");
+  }
+
+  function enhanceCard(card: Element, repo: string): void {
+    const cached = readCache(repo);
+    if (cached) {
+      applyData(card, cached);
+      return;
+    }
+
+    const key = repo.toLowerCase();
+    if (done.has(key)) return;
+    let promise = inflight.get(key);
+    if (!promise) {
+      promise = fetchRepo(repo)
+        .then((data) => {
+          writeCache(repo, data);
+          return data;
+        })
+        .catch((error) => {
+          console.warn("[GITHUB-CARD] Failed to load", repo, error);
+          return null;
+        })
+        .finally(() => {
+          inflight.delete(key);
+          done.add(key);
+        });
+      inflight.set(key, promise);
+    }
+
+    promise.then((data) => {
+      if (data) applyData(card, data);
+      else card.classList.add("fetch-error");
+    });
+  }
+
+  function enhanceCards(): void {
+    document
+      .querySelectorAll<HTMLElement>(".card-github[repo]")
+      .forEach((card) => {
+        const repo = card.getAttribute("repo");
+        if (repo) enhanceCard(card, repo);
+      });
+  }
+
+  function init(): void {
+    enhanceCards();
+    document.addEventListener("swup:content:replace", () => {
+      requestAnimationFrame(enhanceCards);
+    });
+    document.addEventListener("password:decrypted", () => {
+      requestAnimationFrame(enhanceCards);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+</script>

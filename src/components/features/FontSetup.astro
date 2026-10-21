@@ -1,0 +1,85 @@
+---
+import { Font } from "astro:assets";
+import { fontConfig } from "@/config";
+import { collectUsedFontCssVars } from "@/utils/fontHelper";
+
+const allCssVars = fontConfig.enable
+	? collectUsedFontCssVars(fontConfig)
+	: new Set<string>();
+
+const selectedIds: string[] =
+	fontConfig.enable && fontConfig.selected
+		? Array.isArray(fontConfig.selected)
+			? fontConfig.selected
+			: [fontConfig.selected]
+		: [];
+
+const SYSTEM_FONT_STACK =
+	"system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif";
+
+const MONO_FONT_STACK =
+	'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+const selectedFontVars = selectedIds.filter((v) => v !== "system");
+const bodyFontFamily =
+	selectedFontVars.length > 0
+		? [...selectedFontVars.map((v) => `var(${v})`), SYSTEM_FONT_STACK].join(
+				", ",
+			)
+		: SYSTEM_FONT_STACK;
+
+const bannerTitleFontVar = fontConfig.enable
+	? fontConfig.bannerTitleFont || ""
+	: "";
+const bannerSubtitleFontVar = fontConfig.enable
+	? fontConfig.bannerSubtitleFont || ""
+	: "";
+const navbarTitleFontVar = fontConfig.enable
+	? fontConfig.navbarTitleFont || ""
+	: "";
+const codeFontVar = fontConfig.enable ? fontConfig.codeFont || "" : "";
+
+const codeFontFamily = codeFontVar
+	? `var(${codeFontVar}, ${MONO_FONT_STACK})`
+	: MONO_FONT_STACK;
+---
+{Array.from(allCssVars).map((cssVar) => (
+  <Font
+    cssVariable={cssVar as any}
+    preload={selectedFontVars.includes(cssVar)}
+  />
+))}
+
+<style
+  set:html={`
+  :root {
+    --font-code: ${codeFontFamily};
+    ${bannerTitleFontVar ? `--font-banner-title: var(${bannerTitleFontVar}, inherit);` : ""}
+    ${bannerSubtitleFontVar ? `--font-banner-subtitle: var(${bannerSubtitleFontVar}, inherit);` : ""}
+    ${navbarTitleFontVar ? `--font-navbar-title: var(${navbarTitleFontVar}, inherit);` : ""}
+  }
+
+  ${
+		fontConfig.enable &&
+		(bannerTitleFontVar ||
+			bannerSubtitleFontVar ||
+			navbarTitleFontVar ||
+			selectedFontVars.length > 0)
+			? `body {
+      font-family: ${bodyFontFamily};
+    }`
+			: ""
+	}
+`}
+/>
+
+<script>
+  if (document.fonts && typeof document.fonts.ready !== "undefined") {
+    document.fonts.ready
+      .then(() => {
+        document.dispatchEvent(new CustomEvent("fontsLoaded"));
+      })
+      .catch((error) => {
+        console.warn("Font loading failed:", error);
+      });
+  }
+</script>

@@ -1,0 +1,262 @@
+---
+import { Icon } from "astro-icon/components";
+import DropdownItem from "@/components/common/DropdownItem.astro";
+import FloatingButton from "@/components/common/FloatingButton.astro";
+import DisplaySettingsIntegrated from "@/components/controls/DisplaySettingsIntegrated.svelte";
+import MusicPlayer from "@/components/features/MusicPlayer.astro";
+import { backgroundWallpaper, musicPlayerConfig } from "@/config";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+
+const showBgPlayerToggle =
+	backgroundWallpaper.playerEnable && backgroundWallpaper.mode !== "none";
+
+const showDockMusic =
+	musicPlayerConfig.showInDock ??
+	(musicPlayerConfig.showInNavbar || musicPlayerConfig.showInSidebar !== false);
+---
+
+<div class="site-dock">
+
+    <FloatingButton
+        id="nav-menu-switch"
+        icon="material-symbols:menu-rounded"
+        ariaLabel="导航菜单"
+        title="导航菜单"
+    />
+
+    {showDockMusic && (
+        <div class="dock-item">
+            <FloatingButton
+                id="music-player-switch"
+                icon="material-symbols:music-note-rounded"
+                ariaLabel={i18n(I18nKey.music)}
+                title={i18n(I18nKey.music)}
+            />
+            <div
+                id="music-nav-panel"
+                class="float-panel float-panel-closed absolute transition-all right-0 w-80 p-2"
+                data-floating-panel
+                data-floating-panel-trigger="music-player-switch"
+                inert
+                aria-hidden="true"
+            >
+                <MusicPlayer id="music-dock-player" />
+            </div>
+        </div>
+    )}
+
+    <div class="dock-item">
+        <FloatingButton
+            id="display-settings-switch"
+            icon="material-symbols:palette-outline"
+            ariaLabel="主题与显示设置"
+            title="主题与显示设置"
+        />
+        <DisplaySettingsIntegrated client:load></DisplaySettingsIntegrated>
+    </div>
+
+    <div class="dock-item">
+        <FloatingButton
+            id="scheme-switch"
+            icon="material-symbols:wb-sunny-outline-rounded"
+            toggleIcon="material-symbols:dark-mode-outline-rounded"
+            ariaLabel={i18n(I18nKey.lightMode)}
+            title={i18n(I18nKey.lightMode)}
+        />
+        <div
+            id="theme-mode-panel"
+            class="float-panel float-panel-closed absolute transition-all right-0 p-2 w-40"
+            role="menu"
+            aria-labelledby="scheme-switch"
+            data-floating-panel
+            data-floating-panel-trigger="scheme-switch"
+            inert
+            aria-hidden="true"
+        >
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={false}
+            >
+                <span class="scheme-option-inner" data-scheme-option="light">
+                    <Icon name="material-symbols:wb-sunny-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.lightMode)}
+                </span>
+            </DropdownItem>
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={false}
+            >
+                <span class="scheme-option-inner" data-scheme-option="dark">
+                    <Icon name="material-symbols:dark-mode-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.darkMode)}
+                </span>
+            </DropdownItem>
+            <DropdownItem
+                class="scheme-option"
+                isActive={false}
+                isLast={true}
+            >
+                <span class="scheme-option-inner" data-scheme-option="system">
+                    <Icon name="material-symbols:brightness-auto-outline-rounded" class="text-[1.25rem] mr-3"></Icon>
+                    {i18n(I18nKey.systemMode)}
+                </span>
+            </DropdownItem>
+        </div>
+    </div>
+
+    {showBgPlayerToggle && (
+        <FloatingButton
+            id="bg-player-toggle"
+            icon="material-symbols:play-arrow-rounded"
+            toggleIcon="material-symbols:pause-rounded"
+            ariaLabel="背景视频播放"
+            title="背景视频播放"
+            class="hidden md:flex"
+        />
+    )}
+</div>
+
+<script>
+import { DARK_MODE, LIGHT_MODE, SYSTEM_MODE } from "@/constants/constants";
+import type { LIGHT_DARK_MODE } from "@/types/config";
+import {
+	applyThemeToDocument,
+	getStoredTheme,
+	setTheme,
+} from "@/utils/setting-utils";
+
+function toggleFloatingPanel(id: string): void {
+	document.getElementById(id)?.classList.toggle("float-panel-closed");
+}
+
+function getDisplayedTheme(): LIGHT_DARK_MODE {
+	const mode = getStoredTheme();
+	if (mode === SYSTEM_MODE) {
+		return window.matchMedia("(prefers-color-scheme: dark)").matches
+			? DARK_MODE
+			: LIGHT_MODE;
+	}
+	return mode;
+}
+
+function syncSchemeUI(): void {
+	const displayed = getDisplayedTheme();
+	document
+		.getElementById("scheme-switch")
+		?.classList.toggle("toggled", displayed === DARK_MODE);
+
+	const currentMode = getStoredTheme();
+	document.querySelectorAll("[data-scheme-option]").forEach((el) => {
+		const isActive = el.getAttribute("data-scheme-option") === currentMode;
+		el.closest(".scheme-option")?.classList.toggle(
+			"current-theme-btn",
+			isActive,
+		);
+	});
+}
+
+function switchScheme(mode: LIGHT_DARK_MODE): void {
+	setTheme(mode);
+	syncSchemeUI();
+}
+
+function initSiteDock(): void {
+
+	document
+		.getElementById("nav-menu-switch")
+		?.addEventListener("click", () =>
+			toggleFloatingPanel("nav-menu-panel"),
+		);
+
+	document
+		.getElementById("music-player-switch")
+		?.addEventListener("click", () => toggleFloatingPanel("music-nav-panel"));
+
+	document
+		.getElementById("display-settings-switch")
+		?.addEventListener("click", () => toggleFloatingPanel("display-setting"));
+
+	document.getElementById("scheme-switch")?.addEventListener("click", () => {
+		syncSchemeUI();
+		toggleFloatingPanel("theme-mode-panel");
+	});
+
+	document.querySelectorAll("[data-scheme-option]").forEach((el) => {
+		el.addEventListener("click", () => {
+			const mode = el.getAttribute("data-scheme-option") as LIGHT_DARK_MODE;
+			switchScheme(mode);
+			toggleFloatingPanel("theme-mode-panel");
+		});
+	});
+
+	syncSchemeUI();
+	window
+		.matchMedia("(prefers-color-scheme: dark)")
+		.addEventListener("change", () => {
+			if (getStoredTheme() === SYSTEM_MODE) {
+				applyThemeToDocument(SYSTEM_MODE);
+				syncSchemeUI();
+			}
+		});
+
+	const bgPlayerBtn = document.getElementById("bg-player-toggle");
+	if (bgPlayerBtn) {
+		bgPlayerBtn.addEventListener("click", () => {
+			window.dispatchEvent(new CustomEvent("bg-player-toggle"));
+		});
+		const syncBgPlayerIcon = (playing: boolean) => {
+			bgPlayerBtn.classList.toggle("toggled", playing);
+		};
+		window.addEventListener("bg-player-state-change", function (e) {
+			const ce = e as CustomEvent;
+			syncBgPlayerIcon(!!(ce.detail && ce.detail.playing));
+		});
+
+		window.addEventListener("wallpaperModeChange", function (e) {
+			const ce = e as CustomEvent;
+			const mode = ce.detail && ce.detail.mode;
+			bgPlayerBtn.style.display = mode === "none" ? "none" : "";
+		});
+
+		const syncBgPlayerState = () => {
+			syncBgPlayerIcon(
+				document.documentElement.hasAttribute("data-bg-video-playing"),
+			);
+		};
+		syncBgPlayerState();
+		document.addEventListener("swup:contentReplaced", syncBgPlayerState);
+		document.addEventListener("astro:page-load", syncBgPlayerState);
+	}
+}
+
+initSiteDock();
+</script>
+
+<style>
+.site-dock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.site-dock > * {
+    pointer-events: auto;
+}
+
+.site-dock :global(.float-panel:not(.float-panel-closed)) {
+    top: auto;
+    right: 0;
+    bottom: 100%;
+    margin-bottom: 0.5rem;
+    z-index: 50;
+}
+
+.site-dock :global(.scheme-option) {
+    cursor: pointer;
+}
+</style>

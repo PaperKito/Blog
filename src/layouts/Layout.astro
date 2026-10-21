@@ -1,0 +1,561 @@
+---
+import GoogleAnalytics from "@components/analytics/GoogleAnalytics.astro";
+import La51Analytics from "@components/analytics/La51Analytics.astro";
+import MicrosoftClarity from "@components/analytics/MicrosoftClarity.astro";
+import UmamiAnalytics from "@components/analytics/UmamiAnalytics.astro";
+import CodeGroupManager from "@components/features/CodeGroupManager.astro";
+import FancyboxManager from "@components/features/FancyboxManager.astro";
+import FireflyEffect from "@components/features/FireflyEffect.astro";
+import FontSetup from "@components/features/FontSetup.astro";
+import GithubCardManager from "@components/features/GithubCardManager.astro";
+import MusicManager from "@components/features/MusicManager.astro";
+import MusicPlayerView from "@components/features/MusicPlayerView.astro";
+import SakuraEffect from "@components/features/SakuraEffect.astro";
+import WavesEffect from "@components/features/WavesEffect.astro";
+import ConfigCarrier from "@components/layout/ConfigCarrier.astro";
+
+import {
+	analyticsConfig,
+	backgroundWallpaper,
+	displaySettingsConfig,
+	expressiveCodeConfig,
+	musicPlayerConfig,
+	profileConfig,
+	siteConfig,
+} from "@/config";
+import {
+	BANNER_HEIGHT,
+	BANNER_HEIGHT_HOME,
+	BANNER_HEIGHT_NON_HOME,
+	BANNER_HEIGHT_NON_HOME_MIN,
+	PAGE_WIDTH,
+} from "@/constants/constants";
+import { defaultFavicons } from "@/constants/icon";
+import type { Favicon } from "@/types/config";
+import { isHomePage } from "@/utils/layout-utils";
+import { getAuthorAvatarUrl, getSiteLogo } from "@/utils/schema-image";
+import { buildSiteGraph, toAbsoluteUrl } from "@/utils/schema-utils";
+import { getOgLocale } from "@/utils/site-config-utils";
+import { getCanonicalUrl, url } from "@/utils/url-utils";
+
+import "@/styles/main.css";
+import "@/styles/immersive-reading.css";
+import "@/styles/variables.styl";
+import "@rehype-callouts-theme";
+
+interface Props {
+	title?: string;
+	description?: string;
+	lang?: string;
+	setOGTypeArticle?: boolean;
+	postSlug?: string;
+	postCoverImage?: string;
+	ogImageWidth?: number;
+	ogImageHeight?: number;
+	ogImageAlt?: string;
+	hasWallpaper?: boolean;
+}
+
+let {
+	title,
+	description,
+	lang,
+	setOGTypeArticle,
+	postSlug,
+	postCoverImage,
+	ogImageWidth: propsOgImageWidth,
+	ogImageHeight: propsOgImageHeight,
+	ogImageAlt: propsOgImageAlt,
+	hasWallpaper = false,
+} = Astro.props;
+
+const isHomePageCheck = isHomePage(Astro.url.pathname);
+
+const configHue = siteConfig.themeColor.hue;
+
+const fullscreenLayout = backgroundWallpaper.fullscreen?.layout ?? "classic";
+
+const NAVBAR_PANEL_MIN_BLUR = 2;
+const navbarPanelBlur = Math.max(
+	backgroundWallpaper.banner?.navbar?.blur ?? 20,
+	NAVBAR_PANEL_MIN_BLUR,
+);
+
+let pageTitle: string;
+if (title) {
+	pageTitle = `${title} - ${siteConfig.title}`;
+} else {
+	pageTitle = siteConfig.subtitle
+		? `${siteConfig.title} - ${siteConfig.subtitle}`
+		: siteConfig.title;
+}
+
+const favicons: Favicon[] =
+	siteConfig.favicon.length > 0 ? siteConfig.favicon : defaultFavicons;
+
+const appleTouchIcon =
+	favicons.find((f) => f.src.toLowerCase().endsWith(".png")) ?? favicons[0];
+
+if (!lang) {
+	lang = `${siteConfig.lang}`;
+}
+const siteLang = lang.replace("_", "-");
+
+const avatarUrl = await getAuthorAvatarUrl();
+
+const aboutUrl =
+	toAbsoluteUrl("/about/", siteConfig.site_url) ?? siteConfig.site_url;
+
+const siteLogo = await getSiteLogo();
+
+const canonicalUrl = getCanonicalUrl(Astro.url);
+
+let ogImageUrl: string | undefined;
+let ogImageWidth: number | undefined;
+let ogImageHeight: number | undefined;
+const isGeneratedOg = siteConfig.post.generateOgImages && postSlug;
+if (isGeneratedOg) {
+	ogImageUrl = new URL(`/og/${postSlug}.png`, Astro.site).toString();
+	ogImageWidth = 1200;
+	ogImageHeight = 630;
+} else if (postCoverImage) {
+	ogImageUrl = postCoverImage;
+	ogImageWidth = propsOgImageWidth;
+	ogImageHeight = propsOgImageHeight;
+} else if (siteLogo?.url) {
+	ogImageUrl = siteLogo.url;
+	ogImageWidth = siteLogo.width;
+	ogImageHeight = siteLogo.height;
+}
+const ogImageAlt = propsOgImageAlt ?? pageTitle;
+---
+
+<!doctype html>
+<html lang={siteLang} class="bg-(--page-bg) text-[14px] md:text-[16px]" data-wallpaper-mode={backgroundWallpaper.mode} data-fullscreen-layout={fullscreenLayout} data-has-wallpaper={hasWallpaper ? "" : undefined} data-tag-style={siteConfig.tagStyle ?? "pill"} data-category-style={siteConfig.categoryStyle ?? "rectangle"}>
+  <head>
+    <meta charset="UTF-8" />
+    <style is:inline>
+			@layer properties, theme, base, components, utilities;
+		</style>
+    {analyticsConfig?.googleAnalyticsId && (
+            <GoogleAnalytics analyticsId={analyticsConfig.googleAnalyticsId} />
+    )}
+    {analyticsConfig?.microsoftClarityId && (
+            <MicrosoftClarity clarityId={analyticsConfig.microsoftClarityId} />
+    )}
+        {analyticsConfig?.umamiAnalytics?.websiteId && (
+          <UmamiAnalytics
+          websiteId={analyticsConfig.umamiAnalytics.websiteId}
+          scriptUrl={analyticsConfig.umamiAnalytics.scriptUrl}
+          replaysScriptUrl={analyticsConfig.umamiAnalytics.replaysScriptUrl}
+          trackOutboundLinks={analyticsConfig.umamiAnalytics.trackOutboundLinks}
+          collectWebVitals={analyticsConfig.umamiAnalytics.collectWebVitals}
+          replays={analyticsConfig.umamiAnalytics.replays}
+          />
+        )}
+        {analyticsConfig?.la51Analytics?.Id && (
+            <La51Analytics
+            analyticsId={analyticsConfig.la51Analytics.Id}
+            sdkUrl={analyticsConfig.la51Analytics?.sdkUrl}
+            ck={analyticsConfig.la51Analytics?.ck}
+            autoTrack={analyticsConfig.la51Analytics?.autoTrack}
+            hashMode={analyticsConfig.la51Analytics?.hashMode}
+            screenRecord={analyticsConfig.la51Analytics?.screenRecord}
+            />
+    )}
+
+    <title>{pageTitle}</title>
+    <meta
+      name="description"
+      content={description || siteConfig.description || pageTitle}
+    />
+    {
+      siteConfig.keywords && siteConfig.keywords.length > 0 && (
+        <meta name="keywords" content={siteConfig.keywords.join(", ")} />
+      )
+    }
+    <meta name="author" content={profileConfig.name} />
+
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:site_name" content={siteConfig.title} />
+    <meta property="og:locale" content={getOgLocale(lang)} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={pageTitle} />
+    <meta
+      property="og:description"
+      content={description || siteConfig.description || pageTitle}
+    />
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    {ogImageUrl && ogImageWidth && <meta property="og:image:width" content={String(ogImageWidth)} />}
+    {ogImageUrl && ogImageHeight && <meta property="og:image:height" content={String(ogImageHeight)} />}
+    {ogImageUrl && <meta property="og:image:alt" content={ogImageAlt} />}
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    {ogImageUrl && <meta name="twitter:image:alt" content={ogImageAlt} />}
+    {
+      setOGTypeArticle ? (
+        <meta property="og:type" content="article" />
+      ) : (
+        <meta property="og:type" content="website" />
+      )
+    }
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={canonicalUrl} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta
+      name="twitter:description"
+      content={description || siteConfig.description || pageTitle}
+    />
+
+    {
+      isHomePageCheck && (
+        <script
+          is:inline
+          type="application/ld+json"
+          set:html={JSON.stringify(
+            buildSiteGraph({
+              site: siteConfig.site_url,
+              siteConfig,
+              profileConfig,
+              lang: siteLang,
+              authorUrl: aboutUrl,
+              avatarUrl,
+              logo: siteLogo,
+            }),
+          )}
+        />
+      )
+    }
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content={`hsl(${siteConfig.themeColor.hue} 90% 60%)`} />
+    {
+      favicons.map((favicon) => (
+        <link
+          rel="icon"
+          href={favicon.src.startsWith("/") ? url(favicon.src) : favicon.src}
+          sizes={favicon.sizes}
+          media={favicon.theme && `(prefers-color-scheme: ${favicon.theme})`}
+        />
+      ))
+    }
+    {appleTouchIcon && (
+      <link
+        rel="apple-touch-icon"
+        href={appleTouchIcon.src.startsWith("/") ? url(appleTouchIcon.src) : appleTouchIcon.src}
+        type="image/png"
+        sizes={appleTouchIcon.sizes}
+      />
+    )}
+
+    {siteConfig.imageOptimization?.noReferrerDomains &&
+     siteConfig.imageOptimization.noReferrerDomains.length > 0 && (
+      <script
+        is:inline
+        define:vars={{
+          noReferrerDomains: JSON.stringify(
+            siteConfig.imageOptimization.noReferrerDomains
+          ),
+        }}
+      >
+        (function() {
+          const domains = JSON.parse(noReferrerDomains);
+
+          function matchesDomain(urlStr, patterns) {
+            try {
+              const urlObj = new URL(urlStr);
+              const hostname = urlObj.hostname;
+
+              return patterns.some(function(pattern) {
+                const regexPattern = pattern.replace(/\./g, '\\.').replace(/\*/g, '.*');
+                const regex = new RegExp('^' + regexPattern + '$');
+                return regex.test(hostname);
+              });
+            } catch (e) {
+              return false;
+            }
+          }
+
+          function processImage(img) {
+            if (!img.src || img.hasAttribute('referrerpolicy')) return;
+
+            if (matchesDomain(img.src, domains)) {
+              img.setAttribute('referrerpolicy', 'no-referrer');
+            }
+          }
+
+          document.querySelectorAll('img').forEach(processImage);
+
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeName === 'IMG') {
+                  processImage(node);
+                }
+                if (node.querySelectorAll) {
+                  node.querySelectorAll('img').forEach(processImage);
+                }
+              });
+            });
+          });
+
+          observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+          });
+        })();
+      </script>
+    )}
+
+    <script
+      is:inline
+      define:vars={{
+        PAGE_WIDTH,
+        configHue,
+        defaultMode: siteConfig.themeColor.defaultMode ?? "light",
+        defaultWallpaperMode: backgroundWallpaper.mode,
+        isWallpaperSwitchable:
+          displaySettingsConfig.wallpaperModeSwitchable,
+        isFullscreenLayoutSwitchable:
+          displaySettingsConfig.fullscreenLayoutSwitchable,
+        darkTheme: expressiveCodeConfig.darkTheme,
+        lightTheme: expressiveCodeConfig.lightTheme,
+        baseUrl: import.meta.env.BASE_URL,
+        cardTransparentOpacity: backgroundWallpaper.overlay?.cardOpacity ?? 0.6,
+        fullscreenLayout,
+      }}
+    >
+      const LIGHT_MODE = "light";
+      const DARK_MODE = "dark";
+      const SYSTEM_MODE = "system";
+
+      const theme = localStorage.getItem("theme") || defaultMode;
+
+      function getSystemTheme() {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? DARK_MODE
+          : LIGHT_MODE;
+      }
+
+      function resolveTheme(themeValue) {
+        if (themeValue === SYSTEM_MODE) {
+          return getSystemTheme();
+        }
+        return themeValue;
+      }
+
+      const resolvedTheme = resolveTheme(theme);
+      const isDark = resolvedTheme === DARK_MODE;
+
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+
+      document.documentElement.setAttribute(
+        "data-theme",
+        isDark ? darkTheme : lightTheme
+      );
+
+      const hue = localStorage.getItem("hue") || configHue;
+      document.documentElement.style.setProperty("--hue", hue);
+
+      const storedCardOpacity = localStorage.getItem("overlayCardOpacity");
+      const parsedCardOpacity = storedCardOpacity === null ? NaN : Number.parseFloat(storedCardOpacity);
+      const resolvedCardOpacity = Number.isFinite(parsedCardOpacity)
+        ? Math.min(1, Math.max(0, parsedCardOpacity))
+        : cardTransparentOpacity;
+      document.documentElement.style.setProperty("--card-transparent-opacity", String(resolvedCardOpacity));
+
+      const storedFullscreenLayout = isFullscreenLayoutSwitchable
+        ? localStorage.getItem("fullscreenLayout")
+        : null;
+      if (!isFullscreenLayoutSwitchable) {
+        localStorage.removeItem("fullscreenLayout");
+      }
+      const resolvedFullscreenLayout =
+        storedFullscreenLayout === "hero" || storedFullscreenLayout === "classic"
+          ? storedFullscreenLayout
+          : fullscreenLayout;
+      document.documentElement.setAttribute(
+        "data-fullscreen-layout",
+        resolvedFullscreenLayout,
+      );
+
+      const wallpaperMode = isWallpaperSwitchable
+        ? localStorage.getItem("wallpaperMode") || defaultWallpaperMode
+        : defaultWallpaperMode;
+
+      document.documentElement.setAttribute(
+        "data-wallpaper-mode",
+        wallpaperMode
+      );
+
+      if (!window.__fireflyLayoutTransitionGuard) {
+        window.__fireflyLayoutTransitionGuard = true;
+        document.documentElement.setAttribute("data-layout-init", "");
+        const removeLayoutInit = () =>
+          document.documentElement.removeAttribute("data-layout-init");
+        if (document.readyState === "complete") {
+          requestAnimationFrame(removeLayoutInit);
+        } else {
+          window.addEventListener("load", removeLayoutInit, { once: true });
+        }
+      }
+
+      (function applyWavesEnabled() {
+        const wavesEnabled = localStorage.getItem("wavesEnabled");
+        if (wavesEnabled !== null) {
+          document.documentElement.setAttribute("data-waves-enabled", wavesEnabled);
+        }
+      })();
+
+      (function applyGradientEnabled() {
+        const gradientEnabled = localStorage.getItem("gradientEnabled");
+        if (gradientEnabled !== null) {
+          document.documentElement.setAttribute("data-gradient-enabled", gradientEnabled);
+        }
+      })();
+
+      (function applyBannerTitleEnabled() {
+        const bannerTitleEnabled = localStorage.getItem("bannerTitleEnabled");
+        if (bannerTitleEnabled !== null) {
+          document.documentElement.setAttribute("data-banner-title-enabled", bannerTitleEnabled);
+        }
+      })();
+    </script>
+    <style
+      define:vars={{
+        configHue,
+        "page-width": `${siteConfig.pageWidth ?? PAGE_WIDTH}rem`,
+        "navbar-panel-blur": `${navbarPanelBlur}px`,
+        "banner-height-home": `${BANNER_HEIGHT_HOME}vh`,
+        "banner-height-non-home": `max(${BANNER_HEIGHT_NON_HOME}vh, ${BANNER_HEIGHT_NON_HOME_MIN}px)`,
+        "banner-height": `${BANNER_HEIGHT}vh`,
+      }}
+    ></style>
+
+    <slot name="head" />
+
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={profileConfig.name}
+      href={`${Astro.site}rss.xml`}
+    />
+
+    <link
+      rel="alternate"
+      type="application/atom+xml"
+      title={profileConfig.name}
+      href={`${Astro.site}atom.xml`}
+    />
+
+    <FontSetup />
+  </head>
+  <body
+    class="min-h-screen"
+    class:list={[
+      {
+        "is-home": isHomePageCheck,
+      },
+    ]}
+  >
+
+    <script is:inline>
+      (function () {
+        const wm = document.documentElement.getAttribute("data-wallpaper-mode");
+        if (!wm) return;
+        document.body.classList.toggle(
+          "wallpaper-transparent",
+          wm === "overlay" ||
+            (wm === "fullscreen" &&
+              document.documentElement.getAttribute("data-fullscreen-layout") === "hero"),
+        );
+      })();
+    </script>
+
+    <div id="progress-bar"></div>
+
+    {/* 卡片样式：根据 localStorage 覆盖默认配置 */}
+    <script is:inline define:vars={{
+      defaultBorder: siteConfig.card?.border ?? false,
+      defaultFollowTheme: siteConfig.card?.followTheme ?? false,
+    }}>
+      (function() {
+        var stored = localStorage.getItem("cardBorderEnabled");
+        var border = stored !== null ? stored === "true" : defaultBorder;
+        if (border) document.documentElement.classList.add("enable-card-border");
+        else document.documentElement.classList.remove("enable-card-border");
+
+        stored = localStorage.getItem("cardFollowThemeEnabled");
+        var follow = stored !== null ? stored === "true" : defaultFollowTheme;
+        if (follow) document.body.classList.add("card-follow-theme-hue");
+        else document.body.classList.remove("card-follow-theme-hue");
+      })();
+    </script>
+
+    <ConfigCarrier />
+    <MusicManager />
+    <slot />
+
+    {(musicPlayerConfig.showInNavbar || musicPlayerConfig.showInDock || musicPlayerConfig.showInSidebar !== false) && (
+      <MusicPlayerView />
+    )}
+
+    <SakuraEffect />
+
+    <FireflyEffect />
+
+    <WavesEffect />
+
+    <FancyboxManager />
+
+    <CodeGroupManager />
+
+    <GithubCardManager />
+
+    {
+      import.meta.env.PROD && (
+        <script is:inline data-swup-ignore-script define:vars={{ scriptUrl: url('/pagefind/pagefind.js') }}>
+          async function loadPagefind() {
+            try {
+              const response = await fetch(scriptUrl, { method: 'HEAD' });
+              if (!response.ok) {
+                throw new Error(`Pagefind script not found. ${response.status}`);
+              }
+              const pagefind = await import(scriptUrl);
+              await pagefind.options({
+                excerptLength: 20
+              });
+              window.pagefind = pagefind;
+              document.dispatchEvent(new CustomEvent('pagefindready'));
+              console.log('Pagefind loaded and initialized successfully, event dispatched.');
+            } catch (error) {
+              console.error('Failed to load Pagefind:', error);
+              window.pagefind = {
+                search: () => Promise.resolve({ results: [] }),
+                options: () => Promise.resolve(),
+              };
+              document.dispatchEvent(new CustomEvent('pagefindloaderror'));
+              console.log('Pagefind load error, event dispatched.');
+            }
+          }
+
+          window.__loadPagefind = function () {
+            if (!window.__pagefindLoading) window.__pagefindLoading = loadPagefind();
+            return window.__pagefindLoading;
+          };
+        </script>
+      )
+    }
+  </body>
+</html>
+
+
+<script>
+  import { initLayout } from "@/utils/layout-init";
+  initLayout();
+</script>

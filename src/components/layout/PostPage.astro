@@ -1,0 +1,423 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getPostUrlBySlug } from "@utils/url-utils";
+import PostCard from "@/components/layout/PostCard.astro";
+import { siteConfig } from "@/config";
+
+const { page } = Astro.props;
+
+let delay = 0;
+const interval = 50;
+
+type PostEntry = CollectionEntry<"posts">;
+
+const masonryEnabled = siteConfig.postListLayout.grid.masonry;
+const columnWidth = siteConfig.postListLayout.grid.columnWidth || 280;
+
+const defaultLayout = siteConfig.postListLayout.defaultMode || "list";
+const mobileDefaultLayout =
+	siteConfig.postListLayout.mobileDefaultMode || defaultLayout;
+const initialLayoutClass =
+	defaultLayout === "grid"
+		? "post-grid-auto grid-mode"
+		: "flex flex-col gap-4 md:gap-4 list-mode";
+
+const coverPositionClass =
+	siteConfig.postListLayout.coverPosition === "left" ? " cover-left" : "";
+---
+
+<div
+  id="post-list-container"
+  class={`transition-all duration-500 ease-in-out mb-4 ${initialLayoutClass}${coverPositionClass}`}
+  data-default-layout={defaultLayout}
+  data-mobile-default-layout={mobileDefaultLayout}
+  data-masonry-enabled={masonryEnabled}
+  data-column-width={columnWidth}
+  style={`--post-card-min-width: ${columnWidth}px;`}
+>
+  {
+    page.data.map((entry: PostEntry, index: number) => (
+      <PostCard
+        entry={entry}
+        title={entry.data.title}
+        tags={entry.data.tags}
+        category={entry.data.category}
+        published={entry.data.published}
+        updated={entry.data.updated}
+        url={getPostUrlBySlug(entry.id)}
+        image={entry.data.image}
+        description={entry.data.description}
+        draft={entry.data.draft}
+        pinned={entry.data.pinned}
+        password={!!entry.data.password}
+        loading={index < 2 ? "eager" : "lazy"}
+        class:list="onload-animation post-card-item"
+        style={`animation-delay: calc(var(--content-delay) + ${delay++ * interval}ms);`}
+      />
+    ))
+  }
+</div>
+
+<script is:inline define:vars={{ defaultLayout, mobileDefaultLayout, columnWidth }}>
+  (function() {
+    const savedLayout = localStorage.getItem('postListLayout');
+
+    const effectiveDefault = window.innerWidth < 780 ? mobileDefaultLayout : defaultLayout;
+
+    const effectiveLayout = window.innerWidth < 380 ? 'grid' : (savedLayout || effectiveDefault);
+
+    if (effectiveLayout !== defaultLayout) {
+      const container = document.getElementById('post-list-container');
+
+      if (container) {
+
+        container.style.transition = 'none';
+
+        container.classList.remove('list-mode', 'grid-mode', 'post-grid-auto', 'flex', 'flex-col', 'gap-4', 'md:gap-4');
+
+        if (effectiveLayout === 'grid') {
+          container.classList.add('grid-mode', 'post-grid-auto');
+        } else {
+          container.classList.add('list-mode', 'flex', 'flex-col', 'gap-4', 'md:gap-4');
+        }
+
+        container.offsetHeight;
+        container.style.transition = '';
+      }
+    }
+  })();
+</script>
+
+<script>
+  function initLayout() {
+    const postListContainer = document.getElementById("post-list-container");
+    if (!postListContainer) return;
+
+    const savedLayout = localStorage.getItem("postListLayout");
+    const defaultLayout =
+      postListContainer.getAttribute("data-default-layout") || "list";
+    const mobileDefaultLayout =
+      postListContainer.getAttribute("data-mobile-default-layout") || defaultLayout;
+
+    const effectiveDefault = window.innerWidth < 780 ? mobileDefaultLayout : defaultLayout;
+    let currentLayout = savedLayout || effectiveDefault;
+
+    if (window.innerWidth < 380) {
+      currentLayout = "grid";
+    }
+
+    updatePostListLayout(currentLayout);
+  }
+
+  function updatePostListLayout(layout: string) {
+    const postListContainer = document.getElementById("post-list-container");
+    if (!postListContainer) return;
+
+    const isCurrentGrid = postListContainer.classList.contains("grid-mode");
+    const isCurrentList = postListContainer.classList.contains("list-mode");
+    const currentLayout = isCurrentGrid ? "grid" : (isCurrentList ? "list" : null);
+
+    const masonryEnabled = postListContainer.getAttribute("data-masonry-enabled") === "true";
+
+    const applyClasses = () => {
+        postListContainer.classList.remove("list-mode", "grid-mode", "post-grid-auto");
+        if (layout === "grid") {
+            postListContainer.classList.add("grid-mode");
+            postListContainer.classList.remove("flex", "flex-col");
+            if (masonryEnabled) {
+                postListContainer.classList.remove("post-grid-auto");
+                applyMasonryLayout();
+            } else {
+                postListContainer.classList.add("post-grid-auto");
+                resetMasonryLayout();
+            }
+        } else {
+            postListContainer.classList.add("list-mode");
+            postListContainer.classList.add("flex", "flex-col", "gap-4", "md:gap-4");
+            postListContainer.classList.remove("post-grid-auto");
+            resetMasonryLayout();
+        }
+    };
+
+    if (!currentLayout) {
+        applyClasses();
+        return;
+    }
+
+    if (currentLayout === layout) {
+        if (layout === "grid" && masonryEnabled) {
+            applyMasonryLayout();
+        }
+        return;
+    }
+
+    postListContainer.classList.add("layout-switching");
+
+    setTimeout(() => {
+        applyClasses();
+
+        requestAnimationFrame(() => {
+            postListContainer.classList.remove("layout-switching");
+        });
+    }, 200);
+  }
+
+  function resetMasonryLayout() {
+    const container = document.getElementById("post-list-container");
+    if (!container) return;
+
+    container.style.height = "";
+    container.style.position = "";
+    container.style.display = "";
+
+    const items = container.querySelectorAll(".post-card-item");
+    items.forEach((item) => {
+
+      item.style.position = "";
+
+      item.style.top = "";
+
+      item.style.left = "";
+
+      item.style.width = "";
+    });
+  }
+
+  function applyMasonryLayout() {
+    const container = document.getElementById("post-list-container");
+    if (!container) return;
+
+    const masonryEnabled = container.getAttribute("data-masonry-enabled") === "true";
+    if (!masonryEnabled) return;
+
+    if (!container.classList.contains("grid-mode")) return;
+
+    const items = Array.from(container.querySelectorAll(".post-card-item"));
+    if (items.length === 0) return;
+
+    const gap = 16;
+    const columnWidth = parseInt(container.getAttribute("data-column-width") || "280");
+
+    container.style.position = "relative";
+    container.style.display = "block";
+
+    const containerWidth = container.offsetWidth;
+
+    const colCount = Math.max(1, Math.floor((containerWidth + gap) / (columnWidth + gap)));
+    const itemWidth = (containerWidth - (colCount - 1) * gap) / colCount;
+
+    const colHeights = new Array(colCount).fill(0);
+
+    items.forEach((item) => {
+
+      const colIndex = colHeights.indexOf(Math.min(...colHeights));
+
+      item.style.position = "absolute";
+
+      item.style.width = `${itemWidth}px`;
+
+      item.style.setProperty('height', 'auto', 'important');
+
+      const height = item.offsetHeight;
+
+      const top = colHeights[colIndex];
+      const left = colIndex * (itemWidth + gap);
+
+      item.style.top = `${top}px`;
+
+      item.style.left = `${left}px`;
+
+      colHeights[colIndex] += height + gap;
+    });
+
+    container.style.height = `${Math.max(...colHeights)}px`;
+  }
+
+  if (!window.__postPageInit) {
+    window.__postPageInit = true;
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+      setTimeout(initLayout, 50);
+
+      const imgs = document.querySelectorAll('#post-list-container img');
+      imgs.forEach(img => {
+
+          if(img.complete) return;
+          img.addEventListener('load', () => {
+              applyMasonryLayout();
+          });
+      });
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) {
+        setTimeout(initLayout, 100);
+      }
+    });
+
+    window.addEventListener("layoutChange", function (event) {
+
+      const newLayout = event.detail.layout;
+      const postListContainer = document.getElementById("post-list-container");
+      if (!postListContainer) return;
+
+      updatePostListLayout(newLayout);
+    });
+
+    let resizeTimeout: any;
+    window.addEventListener("resize", function () {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function () {
+        initLayout();
+      }, 250);
+    });
+
+    document.addEventListener("astro:page-load", function () {
+      setTimeout(initLayout, 50);
+
+      const imgs = document.querySelectorAll('#post-list-container img');
+      imgs.forEach(img => {
+
+          if(img.complete) return;
+          img.addEventListener('load', () => {
+              applyMasonryLayout();
+          });
+      });
+    });
+
+    document.addEventListener("astro:after-swap", function () {
+      setTimeout(initLayout, 50);
+    });
+
+    setTimeout(initLayout, 0);
+  }
+</script>
+
+<style is:global>
+  .post-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--post-card-min-width, 320px), 1fr));
+    gap: 1rem;
+  }
+
+  @media (max-width: 767px) {
+    .list-mode .post-meta-root {
+      transform: scale(0.72) !important;
+      transform-origin: top left !important;
+      margin-bottom: 0.25rem !important;
+      width: 139% !important;
+    }
+    .list-mode .post-meta.card-header-meta {
+      transform: scale(0.9) !important;
+      width: 111% !important;
+      margin-bottom: 0.5rem !important;
+      gap: 0.5rem !important;
+    }
+    .list-mode :global(.post-meta) {
+      margin-bottom: 0.25rem !important;
+      gap: 0.25rem !important;
+    }
+  }
+</style>
+
+<style>
+  #post-list-container {
+
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  #post-list-container > :global(*) {
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  #post-list-container {
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  }
+
+  #post-list-container.layout-switching {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  #post-list-container.grid-mode :global(.post-card-wrapper) {
+    flex-direction: column-reverse !important;
+
+    --grid-card-padding: 1rem;
+  }
+
+  #post-list-container.grid-mode :global(.post-card-content) {
+    width: 100% !important;
+    padding: var(--grid-card-padding, 1rem) !important;
+  }
+
+  #post-list-container.grid-mode :global(.no-cover .post-card-content) {
+    padding-right: 4.5rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-card-title) {
+    font-size: 1.35rem !important;
+    line-height: 1.75rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-card-title::before) {
+    display: none !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta) {
+    margin-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta .text-xl) {
+    font-size: 1rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.meta-icon) {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    margin-right: 0.25rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta .text-sm) {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.card-header-meta .text-sm) {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.card-header-meta .meta-icon) {
+    width: 2rem !important;
+    height: 2rem !important;
+    margin-right: 0.5rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.card-header-meta .text-xl) {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta .pinned-btn) {
+    height: 2rem !important;
+    padding: 0 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta .pinned-btn .text-xl) {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+
+  #post-list-container.grid-mode :global(.post-meta .pinned-btn .text-sm) {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+
+</style>

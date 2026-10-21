@@ -1,0 +1,328 @@
+---
+
+---
+
+<script>
+	import type { WavesManagerLike } from "@/types/waves";
+	import { WavesRenderer } from "@/utils/waves-draw";
+
+	function readPageBg(): string {
+		return getComputedStyle(document.documentElement)
+			.getPropertyValue("--page-bg")
+			.trim();
+	}
+
+	class WavesManager implements WavesManagerLike {
+		isRunning = false;
+		canvas: HTMLCanvasElement | null = null;
+
+		private ctx: CanvasRenderingContext2D | null = null;
+		private renderer: WavesRenderer | null = null;
+		private animationId: number | null = null;
+		private startTime = 0;
+		private reducedMotion = false;
+		private lastVisibilityHidden = document.hidden;
+		private lastFillColor = "";
+
+		private resizeObserver: ResizeObserver | null = null;
+		private resizeRafId: number | null = null;
+		private dprQuery: MediaQueryList | null = null;
+		private reducedMotionQuery: MediaQueryList | null = null;
+		private themeObserver: MutationObserver | null = null;
+
+		private boundHandleResize: (() => void) | null = null;
+		private boundHandleVisibility: (() => void) | null = null;
+		private boundHandleTheme: (() => void) | null = null;
+		private boundHandleReducedMotion:
+			| ((e: MediaQueryListEvent) => void)
+			| null = null;
+
+		async init(): Promise<void> {
+			if (this.isRunning) return;
+			this.isRunning = true;
+
+			const container = document.getElementById("header-waves");
+			if (!container) {
+
+				this.isRunning = false;
+				return;
+			}
+
+			try {
+				const canvas = document.createElement("canvas");
+				canvas.setAttribute("aria-hidden", "true");
+				container.appendChild(canvas);
+				this.canvas = canvas;
+
+				const placeholder = container.querySelector<HTMLElement>(
+					".waves-svg",
+				);
+				if (placeholder) {
+					placeholder.style.display = "none";
+				}
+
+				this.ctx = canvas.getContext("2d");
+				if (!this.ctx) {
+					throw new Error("Canvas 2D context not initialized");
+				}
+
+				this.reducedMotionQuery = window.matchMedia(
+					"(prefers-reduced-motion: reduce)",
+				);
+				this.reducedMotion = this.reducedMotionQuery.matches;
+				this.lastFillColor = readPageBg();
+				this.lastVisibilityHidden = document.hidden;
+
+				const { width, height, dpr } = this.measure();
+				if (width > 0 && height > 0) {
+
+					this.buildRenderer(width, height, dpr);
+					this.renderer?.draw(performance.now(), this.startTime);
+				}
+
+				this.setupObservers();
+
+				if (!this.reducedMotion && width > 0 && height > 0 && !document.hidden) {
+					this.startAnimation();
+				}
+			} catch (err) {
+				console.warn("[Waves] init failed:", err);
+				this.stop();
+			}
+		}
+
+		private measure(): { width: number; height: number; dpr: number } {
+			const rect = this.canvas
+				? this.canvas.getBoundingClientRect()
+				: { width: 0, height: 0 };
+			return {
+				width: rect.width,
+				height: rect.height,
+				dpr: window.devicePixelRatio || 1,
+			};
+		}
+
+		private buildRenderer(width: number, height: number, dpr: number): void {
+			if (!this.canvas || !this.ctx) return;
+			this.canvas.width = Math.max(1, Math.ceil(width * dpr));
+			this.canvas.height = Math.max(1, Math.ceil(height * dpr));
+			this.renderer = new WavesRenderer(
+				this.ctx,
+				width,
+				height,
+				dpr,
+				this.lastFillColor,
+			);
+			this.startTime = performance.now();
+		}
+
+		private applySize(width: number, height: number, dpr: number): void {
+
+			if (width <= 0 || height <= 0) {
+				this.cancelAnimation();
+				return;
+			}
+			if (!this.renderer) {
+				this.buildRenderer(width, height, dpr);
+			} else {
+				if (this.canvas) {
+					this.canvas.width = Math.max(1, Math.ceil(width * dpr));
+					this.canvas.height = Math.max(1, Math.ceil(height * dpr));
+				}
+				this.renderer.setSize(width, height, dpr);
+			}
+
+			this.renderer?.draw(performance.now(), this.startTime);
+			if (this.reducedMotion) {
+
+			} else if (!this.lastVisibilityHidden) {
+				this.startAnimation();
+			}
+		}
+
+		private startAnimation(): void {
+			if (this.animationId !== null || !this.renderer) return;
+			const animate = () => {
+				if (!this.renderer || !this.canvas) return;
+				try {
+					this.renderer.draw(performance.now(), this.startTime);
+					this.animationId = requestAnimationFrame(animate);
+				} catch (err) {
+					console.warn("[Waves] animate error:", err);
+					this.cancelAnimation();
+				}
+			};
+			this.animationId = requestAnimationFrame(animate);
+		}
+
+		private cancelAnimation(): void {
+			if (this.animationId !== null) {
+				cancelAnimationFrame(this.animationId);
+				this.animationId = null;
+			}
+		}
+
+		private applyHidden(hidden: boolean): void {
+			this.lastVisibilityHidden = hidden;
+			if (hidden) {
+				this.cancelAnimation();
+			} else if (!this.reducedMotion) {
+				this.startAnimation();
+			}
+		}
+
+		private applyReducedMotion(enabled: boolean): void {
+			this.reducedMotion = enabled;
+			if (enabled) {
+				this.cancelAnimation();
+				this.renderer?.draw(performance.now(), this.startTime);
+			} else if (!this.lastVisibilityHidden) {
+				this.startAnimation();
+			}
+		}
+
+		private scheduleResize(): void {
+			if (this.resizeRafId !== null || !this.canvas) return;
+			this.resizeRafId = requestAnimationFrame(() => {
+				this.resizeRafId = null;
+				const { width, height, dpr } = this.measure();
+				this.applySize(width, height, dpr);
+			});
+		}
+
+		private syncThemeColor(): void {
+			const color = readPageBg();
+			if (color === this.lastFillColor) return;
+			this.lastFillColor = color;
+			this.renderer?.setFillColor(color);
+			if (this.reducedMotion) {
+				this.renderer?.draw(performance.now(), this.startTime);
+			}
+		}
+
+		private setupObservers(): void {
+
+			this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
+			if (this.canvas) {
+				this.resizeObserver.observe(this.canvas);
+			}
+
+			const onResize = () => this.scheduleResize();
+			this.boundHandleResize = onResize;
+			window.addEventListener("resize", onResize);
+			this.dprQuery = window.matchMedia(
+				`(resolution: ${window.devicePixelRatio || 1}dppx)`,
+			);
+			this.dprQuery.addEventListener("change", onResize);
+
+			const onVisibility = () => {
+				this.applyHidden(document.hidden);
+			};
+			this.boundHandleVisibility = onVisibility;
+			document.addEventListener("visibilitychange", onVisibility);
+
+			const onTheme = () => this.syncThemeColor();
+			this.boundHandleTheme = onTheme;
+			window.addEventListener("theme-change", onTheme);
+			this.themeObserver = new MutationObserver(() =>
+				this.syncThemeColor(),
+			);
+			this.themeObserver.observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ["class", "data-theme", "style"],
+			});
+
+			const onReducedMotion = (e: MediaQueryListEvent) => {
+				this.applyReducedMotion(e.matches);
+			};
+			this.boundHandleReducedMotion = onReducedMotion;
+			if (this.reducedMotionQuery) {
+				this.reducedMotionQuery.addEventListener(
+					"change",
+					onReducedMotion,
+				);
+			}
+		}
+
+		stop(): void {
+			if (this.resizeRafId !== null) {
+				cancelAnimationFrame(this.resizeRafId);
+				this.resizeRafId = null;
+			}
+			this.cancelAnimation();
+			this.resizeObserver?.disconnect();
+			this.resizeObserver = null;
+			const onResize = this.boundHandleResize;
+			if (onResize) {
+				window.removeEventListener("resize", onResize);
+				this.dprQuery?.removeEventListener("change", onResize);
+			}
+			this.dprQuery = null;
+			const onVisibility = this.boundHandleVisibility;
+			if (onVisibility) {
+				document.removeEventListener(
+					"visibilitychange",
+					onVisibility,
+				);
+			}
+			const onTheme = this.boundHandleTheme;
+			if (onTheme) {
+				window.removeEventListener("theme-change", onTheme);
+			}
+			this.themeObserver?.disconnect();
+			this.themeObserver = null;
+			const onReducedMotion = this.boundHandleReducedMotion;
+			if (onReducedMotion) {
+				this.reducedMotionQuery?.removeEventListener(
+					"change",
+					onReducedMotion,
+				);
+			}
+			this.reducedMotionQuery = null;
+			this.boundHandleResize = null;
+			this.boundHandleVisibility = null;
+			this.boundHandleTheme = null;
+			this.boundHandleReducedMotion = null;
+			this.renderer = null;
+			this.ctx = null;
+			this.canvas?.remove();
+			this.canvas = null;
+			this.isRunning = false;
+		}
+
+		getIsRunning(): boolean {
+			return this.isRunning;
+		}
+	}
+
+	function initWaves(): void {
+		if (window.wavesManager) {
+			return;
+		}
+		const manager = new WavesManager();
+		window.wavesManager = manager;
+		void manager.init();
+	}
+
+	(function setupWaves() {
+		if (window.wavesInitialized) {
+			return;
+		}
+		window.wavesInitialized = true;
+
+		initWaves();
+
+		try {
+			window.swup?.hooks?.on?.("content:replace", () => {
+				const mgr = window.wavesManager;
+				const canvas = mgr?.canvas;
+				if (canvas && !canvas.isConnected) {
+					mgr.stop();
+					void mgr.init();
+				}
+			});
+		} catch {
+
+		}
+	})();
+</script>

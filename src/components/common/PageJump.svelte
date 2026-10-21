@@ -1,0 +1,150 @@
+<script lang="ts">
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+
+interface Props {
+
+	variant: "ellipsis" | "current";
+	currentPage: number;
+	lastPage: number;
+
+	onJump?: (page: number) => void;
+
+	hrefTemplate?: string;
+	hrefFirst?: string;
+}
+
+const {
+	variant,
+	currentPage,
+	lastPage,
+	onJump,
+	hrefTemplate,
+	hrefFirst,
+}: Props = $props();
+
+let isOpen = $state(false);
+let value = $state("");
+let inputEl: HTMLInputElement | undefined = $state();
+
+const digits = $derived(String(lastPage).length);
+
+const label = i18n(I18nKey.paginationJump);
+
+$effect(() => {
+	if (isOpen) {
+		inputEl?.focus();
+		inputEl?.select();
+	}
+});
+
+function open() {
+	value = "";
+	isOpen = true;
+}
+
+function close() {
+	isOpen = false;
+	value = "";
+}
+
+function jump(page: number) {
+	if (onJump) {
+		onJump(page);
+		return;
+	}
+	if (!hrefTemplate) return;
+
+	const href =
+		page === 1 && hrefFirst
+			? hrefFirst
+			: hrefTemplate.replace("{page}", String(page));
+
+	if (window.swup) {
+		window.swup.navigate(href);
+	} else {
+		window.location.href = href;
+	}
+}
+
+function submit() {
+	const parsed = Number.parseInt(value, 10);
+	close();
+	if (Number.isNaN(parsed)) return;
+
+	const target = Math.min(Math.max(parsed, 1), lastPage);
+	if (target !== currentPage) jump(target);
+}
+
+function onInput(event: Event) {
+	const el = event.currentTarget as HTMLInputElement;
+	const cleaned = el.value.replace(/\D/g, "").slice(0, digits);
+	el.value = cleaned;
+	value = cleaned;
+}
+
+function onKeydown(event: KeyboardEvent) {
+	if (event.key === "Enter") {
+		event.preventDefault();
+		submit();
+	} else if (event.key === "Escape") {
+		event.preventDefault();
+		close();
+	}
+}
+</script>
+
+{#if variant === "ellipsis"}
+  {#if isOpen}
+    <div class="btn-card w-11 h-11 rounded-(--radius-large)">
+      <input
+        bind:this={inputEl}
+        value={value}
+        type="text"
+        inputmode="numeric"
+        maxlength={digits}
+        aria-label={label}
+        class="focus-ring-inset w-full h-full rounded-(--radius-large) bg-transparent text-center font-bold text-(--primary)"
+        oninput={onInput}
+        onkeydown={onKeydown}
+        onblur={close}
+      />
+    </div>
+  {:else}
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      class="w-11 h-11 flex items-center justify-center cursor-pointer transition-colors duration-150
+             text-neutral-700 dark:text-neutral-300 hover:text-(--primary)"
+      onclick={open}
+    >
+      <svg class="w-11 h-11" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+    </button>
+  {/if}
+{:else if isOpen}
+  <input
+    bind:this={inputEl}
+    value={value}
+    type="text"
+    inputmode="numeric"
+    maxlength={digits}
+    aria-label={label}
+    class="outline-hidden h-7 p-0 border-b-2 border-(--primary) bg-transparent text-center text-base font-bold text-(--primary)"
+    style={`width: ${digits + 0.5}ch`}
+    oninput={onInput}
+    onkeydown={onKeydown}
+    onblur={close}
+  />
+{:else}
+  <button
+    type="button"
+    aria-label={label}
+    title={label}
+    class="h-11 p-0 flex items-center justify-center cursor-pointer text-base font-bold text-(--primary)"
+    style={`width: ${digits + 0.5}ch`}
+    onclick={open}
+  >
+    {currentPage}
+  </button>
+{/if}

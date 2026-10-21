@@ -1,0 +1,226 @@
+@reference "tailwindcss";
+
+@property --navbar-surface-blur {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@utility navbar-surface-transition {
+  transition:
+    background-color 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    --navbar-surface-blur 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#navbar>div {
+    background-color: var(--card-bg);
+    border: 1px solid transparent;
+    border-radius: 0 0 0.75rem 0.75rem;
+    --navbar-surface-blur: 0px;
+
+    position: relative;
+
+    @apply navbar-surface-transition;
+}
+
+#navbar>div::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+
+    backdrop-filter: blur(var(--navbar-surface-blur, 0px));
+}
+
+#navbar {
+    border-radius: 0 0 0.75rem 0.75rem;
+}
+
+#navbar.navbar-sticky-shadow {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark #navbar.navbar-sticky-shadow {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"]:not(.scrolled).navbar-sticky-shadow>div {
+    box-shadow: none !important;
+}
+
+@media (min-width: 1024px) {
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semi"]>div {
+        --navbar-surface-blur: var(--navbar-glass-blur, 20px) !important;
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"]>div {
+        --navbar-surface-blur: 0px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: none !important;
+    }
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"].scrolled>div {
+        --navbar-surface-blur: var(--navbar-glass-blur, 20px) !important;
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+}
+
+@media (max-width: 1023px) {
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semi"][data-is-home="true"]>div {
+        --navbar-surface-blur: var(--navbar-glass-blur, 20px) !important;
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"]>div {
+        --navbar-surface-blur: 0px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: none !important;
+    }
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"].scrolled>div {
+        --navbar-surface-blur: var(--navbar-glass-blur, 20px) !important;
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        border-radius: 0 0 0.75rem 0.75rem !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+}
+
+@media (min-width: 1024px) {
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semi"]>div {
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semifull"]>div {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semifull"].scrolled>div {
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+}
+
+@media (max-width: 1023px) {
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semi"][data-is-home="true"]>div {
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"]>div {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    :root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"].scrolled>div {
+        background: color-mix(in oklch, var(--card-bg) calc(var(--opacity-45) * 100%), transparent) !important;
+        box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #navbar>div {
+        border-radius: 0 !important;
+    }
+
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semi"][data-is-home="true"]>div,
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"]>div,
+    html[data-has-wallpaper] #navbar[data-transparent-mode="semifull"][data-is-home="true"].scrolled>div {
+        border-radius: 0 !important;
+    }
+}
+
+.is-page-transitioning[data-has-wallpaper] #navbar[data-transparent-mode="semifull"]:not(.scrolled)>div {
+    --navbar-surface-blur: 0px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+}
+
+html:not([data-wallpaper-mode="none"])[data-has-wallpaper]
+    :is(.dropdown-content, .float-panel),
+html:not([data-wallpaper-mode="none"])
+    body.wallpaper-transparent
+    :is(.dropdown-content, .float-panel) {
+    background: rgba(255, 255, 255, 0.55) !important;
+    backdrop-filter: blur(var(--navbar-panel-blur, 20px)) saturate(1.5) !important;
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+:root.dark:not([data-wallpaper-mode="none"])[data-has-wallpaper]
+    :is(.dropdown-content, .float-panel),
+:root.dark:not([data-wallpaper-mode="none"])
+    body.wallpaper-transparent
+    :is(.dropdown-content, .float-panel) {
+    background: rgba(23, 23, 23, 0.6) !important;
+    backdrop-filter: blur(var(--navbar-panel-blur, 20px)) saturate(1.5) !important;
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#navbar-wrapper #navbar[data-full-width="true"] > div,
+html[data-has-wallpaper] #navbar-wrapper #navbar[data-full-width="true"] > div,
+body.wallpaper-transparent #navbar-wrapper #navbar[data-full-width="true"] > div,
+#navbar-wrapper #navbar[data-full-width="true"].scrolled > div {
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+#navbar > div {
+    --navbar-panel-inset: calc(1rem + max(0px, (100% - 2rem - var(--page-width)) / 2));
+}
+
+#navbar > div #search-panel,
+#navbar > div #display-setting {
+    right: var(--navbar-panel-inset);
+}
+
+#navbar > div #music-nav-panel {
+    right: calc(var(--navbar-panel-inset) + 3rem);
+}
+
+@media (max-width: 767px) {
+    #navbar > div #search-panel {
+        left: var(--navbar-panel-inset);
+    }
+}
+
+@media (max-width: 1279px) {
+    .navbar-icon {
+        display: none !important;
+    }
+}
+
+html[data-has-wallpaper] #navbar[data-transparent-mode="semi"].navbar-sticky-shadow>div {
+    box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+}
+:root.dark[data-has-wallpaper] #navbar[data-transparent-mode="semi"].navbar-sticky-shadow>div {
+    box-shadow: inset 0 1px 0 var(--navbar-glass-highlight), 0 1px 0 var(--navbar-glass-hairline) !important;
+}

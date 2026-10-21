@@ -45,6 +45,7 @@ pnpm lint         # biome 检查 + 安全修复
 4. **删文件/大量改动后 HMR 损坏 Svelte SSR 模块状态**：症状为 `TypeError: Cannot read properties of null (reading 'function')`，堆栈在 `Module.push_element`（Search.svelte 等 SSR 组件），页面被 Astro 错误覆盖层挡住但 HTTP 仍返回 200，误导性很强。非代码问题，清 `node_modules/.vite/deps` 后重启 dev 即愈（2026-10-22 单页化改造时复现一次）。
 5. **dev 模式下搜索是假数据**：Pagefind 只在生产构建产物中工作，dev 环境 `Search.svelte` 走内置 mock 结果，属预期行为。
 6. 启动时出现 `Proxy environment variables detected` / `punycode DeprecationWarning` 均为无害警告。
+7. **本环境 git push 需绕代理**：全局配置里被写入 `http.proxy=http://127.0.0.1:<端口>`（本地代理，连不通 github.com），push 报 `Failed to connect ... over proxy`。用 `git -c http.proxy= -c https.proxy= push` 覆盖即可（2026-10-22 首次 push 到 PaperKito/Blog 时复现）。
 
 ---
 

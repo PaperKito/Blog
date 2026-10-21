@@ -27,3 +27,6 @@ yarn.lock
 .idea
 *.iml
 .vscode/
+
+# release tooling (local only, never published)
+tools/

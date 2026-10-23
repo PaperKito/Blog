@@ -4,10 +4,6 @@ export const sponsorConfig: SponsorConfig = {
 
 	title: "",
 
-	description: "",
-
-	showSponsorsList: true,
-
 	showComment: true,
 
 	showButtonInPost: true,
@@ -48,6 +44,4 @@ export const sponsorConfig: SponsorConfig = {
 			enabled: true,
 		},
 	],
-
-	sponsors: [],
 };

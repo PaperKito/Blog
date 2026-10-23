@@ -3,6 +3,7 @@ import { Icon } from "astro-icon/components";
 import DropdownItem from "@/components/common/DropdownItem.astro";
 import FloatingButton from "@/components/common/FloatingButton.astro";
 import DisplaySettingsIntegrated from "@/components/controls/DisplaySettingsIntegrated.svelte";
+import LanguageSwitcher from "@/components/controls/LanguageSwitcher.astro";
 import MusicPlayer from "@/components/features/MusicPlayer.astro";
 import { backgroundWallpaper, musicPlayerConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
@@ -55,6 +56,8 @@ const showDockMusic =
         />
         <DisplaySettingsIntegrated client:load></DisplaySettingsIntegrated>
     </div>
+
+    <LanguageSwitcher />
 
     <div class="dock-item">
         <FloatingButton

@@ -6,7 +6,7 @@ export const displaySettingsConfig: DisplaySettingsConfig =
 
 		enable: true,
 
-		themeColorSwitchable: true,
+		themeColorSwitchable: false,
 
 		layoutSwitchable: true,
 

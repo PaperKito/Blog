@@ -54,7 +54,6 @@ export type {
 } from "./siteConfig";
 export type {
 	SponsorConfig,
-	SponsorItem,
 	SponsorMethod,
 } from "./sponsorConfig";
 
